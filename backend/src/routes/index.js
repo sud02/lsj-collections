@@ -1,0 +1,21 @@
+const router = require('express').Router()
+
+router.use('/auth', require('./auth.routes'))
+router.use('/products', require('./product.routes'))
+router.use('/categories', require('./category.routes'))
+router.use('/subcategories', require('./subcategory.routes'))
+router.use('/cart', require('./cart.routes'))
+router.use('/wishlist', require('./wishlist.routes'))
+router.use('/orders', require('./order.routes'))
+router.use('/payment', require('./payment.routes'))
+router.use('/reviews', require('./review.routes'))
+router.use('/coupons', require('./coupon.routes'))
+router.use('/testimonials', require('./testimonial.routes'))
+router.use('/advertisements', require('./advertisement.routes'))
+router.use('/contact', require('./contact.routes'))
+router.use('/subscribe', require('./subscriber.routes'))
+router.use('/gold-rate', require('./goldrate.routes'))
+router.use('/uploads', require('./upload.routes'))
+router.use('/admin', require('./admin.routes'))
+
+module.exports = router

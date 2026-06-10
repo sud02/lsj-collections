@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Env files — never commit secrets
+.env
+.env.local
+.env.*.local
+.env.production
+
+# Build artifacts
+.next/
+out/
+dist/
+build/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Local uploads (backend writes here at runtime)
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Tooling
+.vercel
+coverage/
+*.tsbuildinfo
+next-env.d.ts

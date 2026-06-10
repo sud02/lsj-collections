@@ -1,0 +1,155 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --gold: #c4996c;
+  --gold-dark: #a67c52;
+  --gold-light: #e8c99a;
+  --gold-bg: #fdf8f3;
+  --cream: #faf7f2;
+  --dark: #1a1a1a;
+  --gray: #666666;
+  --gray-mid: #999999;
+  --gray-light: #f4f4f4;
+  --border: #e8e0d5;
+  --white: #ffffff;
+
+  --radius-sm: 6px;
+  --radius: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 50px;
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.14);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    font-family: var(--font-sans), Inter, system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--dark);
+    background: var(--white);
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-serif), "Cormorant Garamond", Georgia, serif;
+    color: var(--dark);
+    font-weight: 500;
+    letter-spacing: 0.005em;
+  }
+
+  h1 { font-size: 2.75rem; line-height: 1.15; font-weight: 500; letter-spacing: 0.01em; }
+  h2 { font-size: 2.25rem; line-height: 1.2;  font-weight: 500; letter-spacing: 0.008em; }
+  h3 { font-size: 1.625rem; line-height: 1.3; font-weight: 500; }
+  h4 { font-size: 1.25rem; line-height: 1.4;  font-weight: 600; }
+
+  .font-serif, h1, h2, h3, h4 {
+    font-feature-settings: "lnum", "kern";
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  ::selection {
+    background: var(--gold-light);
+    color: var(--dark);
+  }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--cream); }
+  ::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--gold-dark); }
+}
+
+@layer components {
+  .container-lsj {
+    @apply max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3
+           bg-gold text-white font-medium rounded
+           transition-all duration-200 hover:bg-gold-dark hover:-translate-y-0.5
+           hover:shadow-md active:translate-y-0 disabled:opacity-50
+           disabled:cursor-not-allowed disabled:hover:translate-y-0;
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3
+           border border-gold text-gold font-medium rounded
+           transition-all duration-200 hover:bg-gold hover:text-white
+           hover:-translate-y-0.5 hover:shadow-md;
+  }
+
+  .btn-dark {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3
+           bg-dark text-white font-medium rounded
+           transition-all duration-200 hover:bg-black hover:-translate-y-0.5
+           hover:shadow-md;
+  }
+
+  .input-lsj {
+    @apply w-full px-4 py-3 bg-gray-light border border-border rounded
+           text-dark placeholder:text-gray-mid focus:outline-none
+           focus:border-gold focus:bg-white focus:ring-2 focus:ring-gold/20
+           transition-all duration-200;
+  }
+
+  .card-lsj {
+    @apply bg-white border border-border rounded-lg shadow-sm
+           transition-all duration-300;
+  }
+
+  .section-title {
+    @apply font-serif text-3xl md:text-4xl text-dark mb-2 relative inline-block;
+  }
+
+  .section-title::after {
+    content: "";
+    @apply absolute left-1/2 -bottom-2 w-16 h-[2px] bg-gold -translate-x-1/2;
+  }
+
+  .gold-divider {
+    @apply w-16 h-[2px] bg-gold mx-auto my-4;
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  .line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
