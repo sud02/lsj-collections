@@ -12,6 +12,17 @@ export const phoneLogin = async (
   return data;
 };
 
+export const devLogin = async (
+  phone: string,
+  code: string
+): Promise<AuthResponse> => {
+  const { data } = await api.post<AuthResponse>("/auth/dev-login", { phone, code });
+  return data;
+};
+
+export const isBypassMode = (): boolean =>
+  process.env.NEXT_PUBLIC_AUTH_BYPASS_OTP === "true";
+
 export const fetchMe = async (): Promise<User> => {
   const { data } = await api.get<User>("/auth/me");
   return data;

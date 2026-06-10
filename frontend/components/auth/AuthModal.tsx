@@ -48,7 +48,7 @@ export default function AuthModal() {
           }}
         />
       )}
-      {step === "otp" && confirmation && (
+      {step === "otp" && (
         <OTPStep
           phone={phone}
           confirmation={confirmation}

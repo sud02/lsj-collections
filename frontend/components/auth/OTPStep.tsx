@@ -3,13 +3,13 @@ import { useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import toast from "react-hot-toast";
 import type { ConfirmationResult } from "firebase/auth";
-import { phoneLogin, formatPhoneE164 } from "@/lib/auth";
+import { phoneLogin, devLogin, formatPhoneE164, isBypassMode } from "@/lib/auth";
 import { sendOTP, resetRecaptcha } from "@/lib/firebase";
 import { useAuthStore } from "@/store/authStore";
 
 interface Props {
   phone: string;
-  confirmation: ConfirmationResult;
+  confirmation: ConfirmationResult | null;
   onBack: () => void;
   onComplete: (isNew: boolean) => void;
 }
@@ -63,9 +63,14 @@ export default function OTPStep({ phone, confirmation, onBack, onComplete }: Pro
     }
     setLoading(true);
     try {
-      const cred = await currentConfirm.current.confirm(otp);
-      const firebaseToken = await cred.user.getIdToken();
-      const res = await phoneLogin(firebaseToken, phone);
+      let res;
+      if (isBypassMode() || !currentConfirm.current) {
+        res = await devLogin(phone, otp);
+      } else {
+        const cred = await currentConfirm.current.confirm(otp);
+        const firebaseToken = await cred.user.getIdToken();
+        res = await phoneLogin(firebaseToken, phone);
+      }
       login(res.token, res.user);
       toast.success(`Welcome${res.user.name ? `, ${res.user.name.split(" ")[0]}` : ""}!`);
       onComplete(Boolean(res.is_new));
@@ -80,12 +85,18 @@ export default function OTPStep({ phone, confirmation, onBack, onComplete }: Pro
   const resend = async () => {
     setResending(true);
     try {
-      resetRecaptcha();
-      const conf = await sendOTP(formatPhoneE164(phone), "recaptcha-container");
-      currentConfirm.current = conf;
-      setTimer(30);
-      setDigits(Array(6).fill(""));
-      toast.success("OTP resent");
+      if (isBypassMode()) {
+        setTimer(30);
+        setDigits(Array(6).fill(""));
+        toast.success("Use OTP 123456");
+      } else {
+        resetRecaptcha();
+        const conf = await sendOTP(formatPhoneE164(phone), "recaptcha-container");
+        currentConfirm.current = conf;
+        setTimer(30);
+        setDigits(Array(6).fill(""));
+        toast.success("OTP resent");
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Resend failed";
       toast.error(message);

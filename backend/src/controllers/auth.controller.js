@@ -11,6 +11,11 @@ exports.phoneLoginSchema = z.object({
   phone: z.string().regex(/^[6-9]\d{9}$/, 'Invalid 10-digit Indian mobile number')
 })
 
+exports.devLoginSchema = z.object({
+  phone: z.string().regex(/^[6-9]\d{9}$/, 'Invalid 10-digit Indian mobile number'),
+  code: z.string().regex(/^\d{4,6}$/, 'Invalid OTP code')
+})
+
 exports.completeProfileSchema = z.object({
   name: z.string().min(2).max(100),
   email: z.string().email().optional(),
@@ -87,6 +92,51 @@ exports.phoneLogin = async (req, res) => {
   const token = issueToken(user)
 
   logger.info('User logged in', { user_id: user.id, is_new: isNew })
+
+  return ok(res, {
+    token,
+    user: sanitizeUser(user),
+    is_new: isNew
+  })
+}
+
+exports.devLogin = async (req, res) => {
+  if (process.env.AUTH_BYPASS_OTP !== 'true') {
+    return fail(res, 404, 'Dev login is disabled', 'BYPASS_DISABLED')
+  }
+
+  const expected = process.env.AUTH_BYPASS_CODE || '123456'
+  const { phone, code } = req.body
+
+  if (code !== expected) {
+    logger.warn('Dev-login bad code', { phone })
+    return fail(res, 401, 'Invalid OTP code', 'INVALID_CODE')
+  }
+
+  const mobile = normalizeMobile(phone)
+  const [existing] = await db.query('SELECT * FROM users WHERE mobile = ? LIMIT 1', [mobile])
+
+  let user
+  let isNew = false
+
+  if (existing.length) {
+    user = existing[0]
+    if (user.status === 0) {
+      return fail(res, 403, 'Account is deactivated', 'ACCOUNT_DEACTIVATED')
+    }
+  } else {
+    const [result] = await db.query(
+      `INSERT INTO users (mobile, name, email, password, status, created_at)
+       VALUES (?, ?, '', '', 1, NOW())`,
+      [mobile, 'LSJ Customer']
+    )
+    const [rows] = await db.query('SELECT * FROM users WHERE id = ?', [result.insertId])
+    user = rows[0]
+    isNew = true
+  }
+
+  const token = issueToken(user)
+  logger.info('User logged in (dev-bypass)', { user_id: user.id, is_new: isNew })
 
   return ok(res, {
     token,

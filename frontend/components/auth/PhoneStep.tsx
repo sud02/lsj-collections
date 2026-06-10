@@ -4,11 +4,11 @@ import { Phone } from "lucide-react";
 import Button from "@/components/ui/Button";
 import toast from "react-hot-toast";
 import { sendOTP, resetRecaptcha } from "@/lib/firebase";
-import { formatPhoneE164, isValidIndianMobile } from "@/lib/auth";
+import { formatPhoneE164, isValidIndianMobile, isBypassMode } from "@/lib/auth";
 import type { ConfirmationResult } from "firebase/auth";
 
 interface Props {
-  onSent: (confirmation: ConfirmationResult, phone: string) => void;
+  onSent: (confirmation: ConfirmationResult | null, phone: string) => void;
 }
 
 export default function PhoneStep({ onSent }: Props) {
@@ -23,9 +23,14 @@ export default function PhoneStep({ onSent }: Props) {
     }
     setLoading(true);
     try {
-      const confirmation = await sendOTP(formatPhoneE164(phone), "recaptcha-container");
-      toast.success("OTP sent to your mobile");
-      onSent(confirmation, phone);
+      if (isBypassMode()) {
+        toast.success("Use OTP 123456");
+        onSent(null, phone);
+      } else {
+        const confirmation = await sendOTP(formatPhoneE164(phone), "recaptcha-container");
+        toast.success("OTP sent to your mobile");
+        onSent(confirmation, phone);
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to send OTP";
       toast.error(message);
