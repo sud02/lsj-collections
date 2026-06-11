@@ -21,14 +21,26 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'https://lsjcollections.com',
-  'https://www.lsjcollections.com'
+  'https://www.lsjcollections.com',
+  ...(process.env.CORS_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean)
 ]
+
+// Vercel previews get URLs like https://lsj-collections-git-feature-xyz.vercel.app
+// Match the project's subdomains automatically when VERCEL_PROJECT is set.
+const vercelProject = (process.env.VERCEL_PROJECT || '').trim()
+const vercelPattern = vercelProject
+  ? new RegExp(`^https://${vercelProject}(-[a-z0-9-]+)?\\.vercel\\.app$`, 'i')
+  : null
 
 app.use(
   cors({
     origin: (origin, cb) => {
       if (!origin) return cb(null, true)
       if (allowedOrigins.includes(origin)) return cb(null, true)
+      if (vercelPattern && vercelPattern.test(origin)) return cb(null, true)
       cb(new Error(`Origin ${origin} not allowed by CORS`))
     },
     credentials: true,
