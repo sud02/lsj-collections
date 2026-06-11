@@ -31,4 +31,8 @@ router.delete('/products/:id', asyncHandler(ctrl.deleteProduct))
 router.get('/orders', asyncHandler(ctrl.listOrders))
 router.patch('/orders/:id', asyncHandler(ctrl.updateOrder))
 
+// Gold rate
+router.get('/gold-rate', asyncHandler(ctrl.getGoldRate))
+router.patch('/gold-rate', asyncHandler(ctrl.updateGoldRate))
+
 module.exports = router

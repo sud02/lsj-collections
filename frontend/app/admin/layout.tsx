@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Package, MessageSquareQuote, Star, ShoppingBag, Plus, LogOut, ArrowLeft } from "lucide-react";
+import { LayoutDashboard, Package, MessageSquareQuote, Star, ShoppingBag, Plus, Coins, LogOut, ArrowLeft } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,7 @@ const NAV = [
   { href: "/admin/testimonials", label: "Testimonials", icon: MessageSquareQuote },
   { href: "/admin/reviews", label: "Reviews", icon: Star },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
+  { href: "/admin/gold-rate", label: "Gold rate", icon: Coins },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

@@ -343,6 +343,76 @@ exports.updateOrder = async (req, res) => {
 }
 
 // ──────────────────────────────────────────────
+// Gold rate (stored in the ornaments table)
+// ──────────────────────────────────────────────
+const RATE_24K_MATCHER = (n) => /24\s*k/i.test(n)
+const RATE_22K_MATCHER = (n) => /22\s*k/i.test(n)
+
+const findRateRow = async (matcher) => {
+  const [rows] = await db.query('SELECT id, name, price, updated_at FROM ornaments WHERE status = 1')
+  return rows.find((r) => matcher(String(r.name || '')))
+}
+
+exports.getGoldRate = async (_req, res) => {
+  const row24 = await findRateRow(RATE_24K_MATCHER)
+  const row22 = await findRateRow(RATE_22K_MATCHER)
+
+  const rate24 = row24 ? parseFloat(row24.price) : 0
+  const rate22 = row22 ? parseFloat(row22.price) : (rate24 ? Math.round(rate24 * 0.916) : 0)
+
+  return ok(res, {
+    rate_22k: rate22,
+    rate_24k: rate24,
+    has_explicit_22k: !!row22,
+    updated_at: row24?.updated_at || row22?.updated_at || null
+  })
+}
+
+const rateUpdateSchema = z.object({
+  rate_24k: z.coerce.number().positive().max(1_000_000),
+  rate_22k: z.coerce.number().positive().max(1_000_000).optional()
+})
+
+exports.updateGoldRate = async (req, res) => {
+  const parsed = rateUpdateSchema.safeParse(req.body)
+  if (!parsed.success) return badRequest(res, parsed.error.issues[0].message, 'VALIDATION_ERROR')
+  const { rate_24k, rate_22k } = parsed.data
+
+  // Update / insert 24K row
+  const row24 = await findRateRow(RATE_24K_MATCHER)
+  if (row24) {
+    await db.query('UPDATE ornaments SET price = ?, updated_at = NOW() WHERE id = ?', [
+      String(rate_24k),
+      row24.id
+    ])
+  } else {
+    await db.query(
+      "INSERT INTO ornaments (name, price, status, created_at) VALUES ('24k Gold Rate', ?, 1, NOW())",
+      [String(rate_24k)]
+    )
+  }
+
+  // Update / insert 22K row (only if explicitly provided)
+  if (rate_22k != null) {
+    const row22 = await findRateRow(RATE_22K_MATCHER)
+    if (row22) {
+      await db.query('UPDATE ornaments SET price = ?, updated_at = NOW() WHERE id = ?', [
+        String(rate_22k),
+        row22.id
+      ])
+    } else {
+      await db.query(
+        "INSERT INTO ornaments (name, price, status, created_at) VALUES ('22k Gold Rate', ?, 1, NOW())",
+        [String(rate_22k)]
+      )
+    }
+  }
+
+  logger.info('Admin updated gold rate', { admin_id: req.user.id, rate_24k, rate_22k })
+  return ok(res, { rate_24k, rate_22k: rate_22k ?? Math.round(rate_24k * 0.916), updated: true })
+}
+
+// ──────────────────────────────────────────────
 // Reference data (for product form selects)
 // ──────────────────────────────────────────────
 exports.referenceData = async (_req, res) => {
