@@ -55,8 +55,9 @@ export const statusColorClass = (status: string): string => {
   return map[status] ?? "bg-gray-100 text-gray-800 border-gray-300";
 };
 
-export const cn = (...classes: Array<string | false | null | undefined>): string =>
-  classes.filter(Boolean).join(" ");
+type ClassValue = string | number | bigint | boolean | null | undefined;
+export const cn = (...classes: ClassValue[]): string =>
+  classes.filter((c): c is string => typeof c === "string" && c.length > 0).join(" ");
 
 export const formatDate = (iso?: string | null): string => {
   if (!iso) return "";

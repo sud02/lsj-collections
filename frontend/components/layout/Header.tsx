@@ -34,7 +34,7 @@ export default function Header() {
   const accountRef = useRef<HTMLDivElement>(null);
   const catRef = useRef<HTMLDivElement>(null);
 
-  const { user, isLoggedIn, openAuthModal, logout } = useAuthStore();
+  const { user, isLoggedIn, logout } = useAuthStore();
   const cartCount = useCartStore((s) => s.count);
   const wishlistCount = useWishlistStore((s) => s.count);
 
@@ -120,12 +120,13 @@ export default function Header() {
                       </button>
                     </>
                   ) : (
-                    <button
-                      onClick={() => { openAuthModal(); setAccountOpen(false); }}
-                      className="w-full text-left px-4 py-2 text-xs hover:bg-gold-bg"
+                    <Link
+                      href="/account"
+                      onClick={() => setAccountOpen(false)}
+                      className="block w-full text-left px-4 py-2 text-xs hover:bg-gold-bg"
                     >
-                      Login / Register
-                    </button>
+                      Login / Register <span className="text-gold-dark">(coming soon)</span>
+                    </Link>
                   )}
                 </div>
               )}
@@ -298,12 +299,13 @@ export default function Header() {
                     <button onClick={handleLogout} className="block py-2 text-sm text-red-600">Logout</button>
                   </>
                 ) : (
-                  <button
-                    onClick={() => { openAuthModal(); setMobileOpen(false); }}
-                    className="btn-primary w-full"
+                  <Link
+                    href="/account"
+                    onClick={() => setMobileOpen(false)}
+                    className="btn-primary w-full text-center"
                   >
                     Login / Register
-                  </button>
+                  </Link>
                 )}
               </div>
             </div>
