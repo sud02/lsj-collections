@@ -161,7 +161,7 @@ export default function Header() {
             width={1508}
             height={1114}
             priority
-            className="h-12 md:h-14 w-auto"
+            className="h-16 md:h-20 w-auto"
           />
         </Link>
 
@@ -268,7 +268,7 @@ export default function Header() {
           <aside className="absolute left-0 top-0 h-full w-[85vw] max-w-sm bg-white shadow-lg overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b border-border">
               <Link href="/" onClick={() => setMobileOpen(false)} aria-label="LSJ Collections — Home">
-                <Image src="/logo_lsj.png" alt="LSJ Collections" width={1508} height={1114} className="h-10 w-auto" />
+                <Image src="/logo_lsj.png" alt="LSJ Collections" width={1508} height={1114} className="h-12 w-auto" />
               </Link>
               <button onClick={() => setMobileOpen(false)} aria-label="Close">
                 <X className="w-5 h-5" />

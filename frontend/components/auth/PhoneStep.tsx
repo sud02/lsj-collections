@@ -44,7 +44,7 @@ export default function PhoneStep({ onSent }: Props) {
   return (
     <form onSubmit={onSubmit} className="p-6 space-y-5">
       <div>
-        <Image src="/logo_lsj.png" alt="LSJ Collections" width={1508} height={1114} className="h-12 w-auto mb-3" />
+        <Image src="/logo_lsj.png" alt="LSJ Collections" width={1508} height={1114} className="h-16 w-auto mb-3" />
         <h4 className="font-serif text-lg text-dark mb-1">Welcome to LSJ Collections</h4>
         <p className="text-xs text-gray">
           Enter your mobile number — we&apos;ll send you a one-time password to verify.

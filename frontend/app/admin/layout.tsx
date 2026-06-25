@@ -42,7 +42,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <aside className="fixed inset-y-0 left-0 w-60 bg-white border-r border-border hidden md:flex flex-col">
         <div className="p-5 border-b border-border">
           <Link href="/" aria-label="LSJ Collections — Home">
-            <Image src="/logo_lsj.png" alt="LSJ Collections" width={1508} height={1114} className="h-11 w-auto" />
+            <Image src="/logo_lsj.png" alt="LSJ Collections" width={1508} height={1114} className="h-14 w-auto" />
           </Link>
           <p className="text-[11px] text-gray mt-2">Admin · {user.name}</p>
         </div>

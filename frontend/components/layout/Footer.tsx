@@ -39,7 +39,7 @@ export default function Footer() {
               alt="LSJ Collections"
               width={1508}
               height={1114}
-              className="h-14 w-auto mb-3 brightness-0 invert"
+              className="h-20 w-auto mb-3 brightness-0 invert"
             />
             <div className="font-serif text-[11px] text-gold tracking-[0.3em] uppercase mb-4">
               Premium Hallmark Jewellery
