@@ -1,6 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Package, MessageSquareQuote, Star, ShoppingBag, Plus, Coins, LogOut, ArrowLeft } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
@@ -40,8 +41,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="min-h-screen bg-cream">
       <aside className="fixed inset-y-0 left-0 w-60 bg-white border-r border-border hidden md:flex flex-col">
         <div className="p-5 border-b border-border">
-          <p className="font-serif text-xl text-dark">LSJ Admin</p>
-          <p className="text-[11px] text-gray mt-1">{user.name}</p>
+          <Link href="/" aria-label="LSJ Collections — Home">
+            <Image src="/logo_lsj.png" alt="LSJ Collections" width={1508} height={1114} className="h-11 w-auto" />
+          </Link>
+          <p className="text-[11px] text-gray mt-2">Admin · {user.name}</p>
         </div>
         <nav className="p-3 space-y-1 flex-1 overflow-auto">
           {NAV.map((n) => {

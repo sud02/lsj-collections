@@ -45,13 +45,21 @@ export const metadata: Metadata = {
     title: "LSJ Collections — Premium Hallmark Jewellery, Tirupati",
     description:
       "Certified hallmark gold, silver & diamond jewellery. Crafted in Tirupati, delivered across India.",
+    images: [{ url: "/logo_lsj.png", width: 1508, height: 1114, alt: "LSJ Collections" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "LSJ Collections",
     description: "Premium hallmark jewellery from Tirupati.",
+    images: ["/logo_lsj.png"],
   },
-  icons: { icon: "/favicon.ico" },
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/logo_lsj.png", type: "image/png" },
+    ],
+    apple: "/logo_lsj.png",
+  },
   robots: { index: true, follow: true },
 };
 

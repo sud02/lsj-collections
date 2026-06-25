@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -153,15 +154,15 @@ export default function Header() {
           <Menu className="w-5 h-5" />
         </button>
 
-        <Link href="/" className="shrink-0">
-          <div className="flex flex-col">
-            <span className="font-serif text-2xl md:text-3xl text-dark tracking-wide leading-none">
-              LSJ
-            </span>
-            <span className="font-serif text-[11px] text-gold tracking-[0.3em] uppercase mt-0.5">
-              Collections
-            </span>
-          </div>
+        <Link href="/" className="shrink-0" aria-label="LSJ Collections — Home">
+          <Image
+            src="/logo_lsj.png"
+            alt="LSJ Collections"
+            width={1508}
+            height={1114}
+            priority
+            className="h-12 md:h-14 w-auto"
+          />
         </Link>
 
         <form onSubmit={onSearch} className="hidden md:flex flex-1 max-w-2xl mx-auto">
@@ -266,7 +267,9 @@ export default function Header() {
           <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
           <aside className="absolute left-0 top-0 h-full w-[85vw] max-w-sm bg-white shadow-lg overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b border-border">
-              <span className="font-serif text-lg text-dark">Menu</span>
+              <Link href="/" onClick={() => setMobileOpen(false)} aria-label="LSJ Collections — Home">
+                <Image src="/logo_lsj.png" alt="LSJ Collections" width={1508} height={1114} className="h-10 w-auto" />
+              </Link>
               <button onClick={() => setMobileOpen(false)} aria-label="Close">
                 <X className="w-5 h-5" />
               </button>

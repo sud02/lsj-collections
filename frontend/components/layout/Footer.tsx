@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import { MapPin, Phone, Mail, ArrowUp, ChevronRight } from "lucide-react";
 import { FaFacebookF, FaInstagram, FaTwitter, FaYoutube, FaWhatsapp } from "react-icons/fa";
@@ -33,7 +34,13 @@ export default function Footer() {
       <footer className="bg-[#252525] text-white/80 mt-20">
         <div className="container-lsj py-14 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           <div>
-            <div className="font-serif text-2xl text-white mb-1">LSJ Collections</div>
+            <Image
+              src="/logo_lsj.png"
+              alt="LSJ Collections"
+              width={1508}
+              height={1114}
+              className="h-14 w-auto mb-3 brightness-0 invert"
+            />
             <div className="font-serif text-[11px] text-gold tracking-[0.3em] uppercase mb-4">
               Premium Hallmark Jewellery
             </div>
