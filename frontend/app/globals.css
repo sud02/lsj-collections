@@ -3,16 +3,22 @@
 @tailwind utilities;
 
 :root {
-  --gold: #c4996c;
-  --gold-dark: #a67c52;
-  --gold-light: #e8c99a;
-  --gold-bg: #fdf8f3;
+  /* Brand gold — LSJ emblem (antique gold) */
+  --gold: #c49a5c;
+  --gold-dark: #a87c45;
+  --gold-light: #e4c58e;
+  --gold-bg: #fbf6ee;
+  /* Peacock teal — gem accent in the logo's flame */
+  --teal: #1b8a94;
+  --teal-dark: #136b73;
+  --teal-light: #5fb8c0;
+  --teal-bg: #ebf6f7;
   --cream: #faf7f2;
-  --dark: #1a1a1a;
+  --dark: #221f1d;
   --gray: #666666;
   --gray-mid: #999999;
   --gray-light: #f4f4f4;
-  --border: #e8e0d5;
+  --border: #eadfcf;
   --white: #ffffff;
 
   --radius-sm: 6px;
@@ -91,6 +97,19 @@
            border border-gold text-gold font-medium rounded
            transition-all duration-200 hover:bg-gold hover:text-white
            hover:-translate-y-0.5 hover:shadow-md;
+  }
+
+  .btn-accent {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3
+           bg-teal text-white font-medium rounded
+           transition-all duration-200 hover:bg-teal-dark hover:-translate-y-0.5
+           hover:shadow-md active:translate-y-0 disabled:opacity-50
+           disabled:cursor-not-allowed disabled:hover:translate-y-0;
+  }
+
+  .badge-accent {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-pill
+           bg-teal text-white text-[10px] font-semibold uppercase tracking-wide;
   }
 
   .btn-dark {

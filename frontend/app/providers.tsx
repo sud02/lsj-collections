@@ -37,13 +37,13 @@ export default function Providers({ children }: { children: ReactNode }) {
           duration: 3500,
           style: {
             borderRadius: "12px",
-            background: "#1a1a1a",
+            background: "#221f1d",
             color: "#fff",
             fontSize: "13px",
             padding: "10px 16px",
           },
           success: {
-            iconTheme: { primary: "#c4996c", secondary: "#fff" },
+            iconTheme: { primary: "#1b8a94", secondary: "#fff" },
           },
         }}
       />

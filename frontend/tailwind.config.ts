@@ -8,20 +8,28 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Brand gold — drawn from the LSJ emblem (antique gold)
         gold: {
-          DEFAULT: "#c4996c",
-          dark: "#a67c52",
-          light: "#e8c99a",
-          bg: "#fdf8f3",
+          DEFAULT: "#c49a5c",
+          dark: "#a87c45",
+          light: "#e4c58e",
+          bg: "#fbf6ee",
+        },
+        // Peacock teal — the gem accent in the logo's flame
+        teal: {
+          DEFAULT: "#1b8a94",
+          dark: "#136b73",
+          light: "#5fb8c0",
+          bg: "#ebf6f7",
         },
         cream: "#faf7f2",
-        dark: "#1a1a1a",
+        dark: "#221f1d",
         gray: {
           DEFAULT: "#666666",
           mid: "#999999",
           light: "#f4f4f4",
         },
-        border: "#e8e0d5",
+        border: "#eadfcf",
       },
       fontFamily: {
         serif: ["var(--font-serif)", "Cormorant Garamond", "Georgia", "serif"],

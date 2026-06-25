@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-type Variant = "gold" | "green" | "red" | "blue" | "gray" | "dark";
+type Variant = "gold" | "teal" | "green" | "red" | "blue" | "gray" | "dark";
 
 interface Props {
   children: ReactNode;
@@ -11,6 +11,7 @@ interface Props {
 
 const classes: Record<Variant, string> = {
   gold: "bg-gold text-white",
+  teal: "bg-teal text-white",
   green: "bg-green-100 text-green-800 border border-green-300",
   red: "bg-red-100 text-red-800 border border-red-300",
   blue: "bg-blue-100 text-blue-800 border border-blue-300",

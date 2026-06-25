@@ -62,7 +62,7 @@ export default function ProductCard({ product }: { product: Product }) {
           {/* Badges */}
           <div className="absolute top-2 left-2 flex flex-col gap-1">
             {discount > 0 && <Badge variant="gold">-{discount}%</Badge>}
-            {product.is_new_arrival && <Badge variant="dark">New</Badge>}
+            {product.is_new_arrival && <Badge variant="teal">New</Badge>}
           </div>
 
           {/* Wishlist icon */}
