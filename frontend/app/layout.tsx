@@ -1,9 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
-import AnnouncementBar from "@/components/layout/AnnouncementBar";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
-import MobileBottomNav from "@/components/layout/MobileBottomNav";
+import StorefrontChrome from "@/components/layout/StorefrontChrome";
 import Providers from "./providers";
 import "./globals.css";
 
@@ -75,11 +72,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${cormorant.variable} ${inter.variable}`}>
       <body className="min-h-screen flex flex-col bg-white text-dark antialiased pb-16 lg:pb-0">
         <Providers>
-          <AnnouncementBar />
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-          <MobileBottomNav />
+          <StorefrontChrome>{children}</StorefrontChrome>
         </Providers>
       </body>
     </html>

@@ -20,6 +20,17 @@ export const devLogin = async (
   return data;
 };
 
+export const adminLogin = async (
+  email: string,
+  password: string
+): Promise<{ token: string; user: User }> => {
+  const { data } = await api.post<{ token: string; user: User }>("/auth/admin-login", {
+    email,
+    password,
+  });
+  return data;
+};
+
 export const isBypassMode = (): boolean =>
   process.env.NEXT_PUBLIC_AUTH_BYPASS_OTP === "true";
 

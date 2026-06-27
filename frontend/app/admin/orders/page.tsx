@@ -1,5 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { Eye } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 
@@ -75,6 +77,7 @@ export default function AdminOrders() {
                 <th className="px-4 py-3">Payment</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Date</th>
+                <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
@@ -103,6 +106,11 @@ export default function AdminOrders() {
                     </select>
                   </td>
                   <td className="px-4 py-3 text-xs text-gray">{new Date(o.created_at).toLocaleDateString()}</td>
+                  <td className="px-4 py-3">
+                    <Link href={`/admin/orders/${o.id}`} className="text-gold-dark hover:text-gold inline-flex items-center gap-1 text-xs">
+                      <Eye className="w-3.5 h-3.5" /> View
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>

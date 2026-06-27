@@ -238,6 +238,81 @@ exports.createProduct = async (req, res) => {
   return ok(res, { id: r.insertId, slug, message: 'Product created' }, 201)
 }
 
+// Bulk import — text/numeric fields only. Products are created as DRAFTS
+// (status 0, no images) so the storefront isn't broken; admin adds an image
+// via the edit page, which flips the product active.
+const bulkRowSchema = z.object({
+  product_name: z.string().min(2).max(250),
+  product_code: z.string().max(100).optional().or(z.literal('')),
+  slug: z.string().max(250).optional().or(z.literal('')),
+  category_id: z.coerce.number().int().positive(),
+  subcategory_id: z.coerce.number().int().positive().optional().nullable().or(z.literal('')),
+  ornament_type: z.coerce.number().int().positive(),
+  ornament_weight: z.coerce.string().max(150),
+  discount_percentage: z.coerce.string().max(50).optional(),
+  miscalleneous_price: z.coerce.string().max(255).optional(),
+  short_description: z.string().max(2000).optional().or(z.literal('')),
+  description: z.string().optional().or(z.literal('')),
+  features: z.string().optional().or(z.literal('')),
+  stock: z.coerce.string().max(50).optional(),
+  is_lakshmi_kubera: z.coerce.string().optional(),
+  is_popular_collection: z.coerce.string().optional(),
+  is_recommended: z.coerce.string().optional()
+})
+
+const MAX_BULK_ROWS = 500
+
+exports.bulkCreateProducts = async (req, res) => {
+  const rows = req.body?.rows
+  if (!Array.isArray(rows) || !rows.length) {
+    return badRequest(res, 'Provide a non-empty "rows" array', 'NO_ROWS')
+  }
+  if (rows.length > MAX_BULK_ROWS) {
+    return badRequest(res, `Too many rows (max ${MAX_BULK_ROWS} per import)`, 'TOO_MANY_ROWS')
+  }
+
+  const created = []
+  const failed = []
+
+  for (let i = 0; i < rows.length; i++) {
+    const parsed = bulkRowSchema.safeParse(rows[i])
+    if (!parsed.success) {
+      failed.push({ row: i + 1, reason: parsed.error.issues[0].message })
+      continue
+    }
+    const d = parsed.data
+    const slug = d.slug ? slugify(d.slug) : slugify(d.product_name)
+    const code = d.product_code || `LSJ-${Date.now()}-${i}`
+    try {
+      const [r] = await db.query(
+        `INSERT INTO products (
+          product_code, product_name, slug, category_id, subcategory_id,
+          featured_image, additional_images, ornament_type, ornament_weight,
+          discount_percentage, miscalleneous_price, short_description, description,
+          features, general_info, hashtags, stock,
+          is_lakshmi_kubera, is_popular_collection, is_recommended,
+          status, created_at
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())`,
+        [
+          code, d.product_name, slug, d.category_id, d.subcategory_id || null,
+          '', '', d.ornament_type, d.ornament_weight,
+          d.discount_percentage || '0', d.miscalleneous_price || '0',
+          d.short_description || '', d.description || '',
+          d.features || '', '', '', d.stock || '1',
+          d.is_lakshmi_kubera || '0', d.is_popular_collection || '0', d.is_recommended || '0',
+          0 // draft until an image is added
+        ]
+      )
+      created.push({ row: i + 1, id: r.insertId, product_name: d.product_name })
+    } catch (err) {
+      failed.push({ row: i + 1, reason: err.code === 'ER_DUP_ENTRY' ? 'Duplicate product code/slug' : 'Database error' })
+    }
+  }
+
+  logger.info('Admin bulk product import', { admin_id: req.user.id, created: created.length, failed: failed.length })
+  return ok(res, { created: created.length, failed, created_items: created }, 201)
+}
+
 exports.updateProduct = async (req, res) => {
   const id = toPositiveInt(req.params.id)
   if (!id) return notFound(res, 'Product not found')
@@ -320,6 +395,31 @@ exports.listOrders = async (req, res) => {
     params
   )
   return ok(res, rows)
+}
+
+exports.getOrder = async (req, res) => {
+  const id = toPositiveInt(req.params.id)
+  if (!id) return notFound(res, 'Order not found')
+
+  const [orders] = await db.query('SELECT * FROM orders WHERE id = ?', [id])
+  if (!orders.length) return notFound(res, 'Order not found')
+  const order = orders[0]
+
+  // order_products links to the orders.order_id STRING (e.g. "LSJ-1777…"), not the numeric id.
+  const [items] = await db.query(
+    `SELECT id, product_id, product_name, product_image, product_slug, product_type,
+            quantity, product_weight, price_per_gram, product_actual_price, product_price
+     FROM order_products WHERE order_id = ? ORDER BY id`,
+    [order.order_id]
+  )
+
+  return ok(res, {
+    order,
+    items: items.map((it) => ({
+      ...it,
+      product_image_url: img.product(it.product_image)
+    }))
+  })
 }
 
 exports.updateOrder = async (req, res) => {

@@ -145,6 +145,14 @@
   }
 }
 
+@media print {
+  /* Hide app chrome so only the invoice prints */
+  aside, .no-print { display: none !important; }
+  main { margin: 0 !important; padding: 0 !important; }
+  .print-area { box-shadow: none !important; border: none !important; }
+  body { background: #fff !important; }
+}
+
 @layer utilities {
   .text-balance { text-wrap: balance; }
 

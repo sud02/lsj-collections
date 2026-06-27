@@ -7,6 +7,7 @@ const { asyncHandler } = require('../utils/response')
 
 router.post('/phone-login', authLimiter, validate(ctrl.phoneLoginSchema), asyncHandler(ctrl.phoneLogin))
 router.post('/dev-login', authLimiter, validate(ctrl.devLoginSchema), asyncHandler(ctrl.devLogin))
+router.post('/admin-login', authLimiter, validate(ctrl.adminLoginSchema), asyncHandler(ctrl.adminLogin))
 router.post('/complete-profile', auth, validate(ctrl.completeProfileSchema), asyncHandler(ctrl.completeProfile))
 router.get('/me', auth, asyncHandler(ctrl.me))
 router.post('/logout', auth, asyncHandler(ctrl.logout))

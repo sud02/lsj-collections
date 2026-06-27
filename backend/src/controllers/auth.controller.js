@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken')
+const bcrypt = require('bcryptjs')
 const { z } = require('zod')
 const db = require('../config/db')
 const firebaseService = require('../services/firebase.service')
@@ -9,6 +10,11 @@ const logger = require('../utils/logger')
 exports.phoneLoginSchema = z.object({
   firebase_token: z.string().min(10),
   phone: z.string().regex(/^[6-9]\d{9}$/, 'Invalid 10-digit Indian mobile number')
+})
+
+exports.adminLoginSchema = z.object({
+  email: z.string().email('Enter a valid email'),
+  password: z.string().min(1, 'Password is required')
 })
 
 exports.devLoginSchema = z.object({
@@ -169,3 +175,72 @@ exports.me = async (req, res) => {
 }
 
 exports.logout = async (_req, res) => ok(res, { message: 'Logged out' })
+
+// ──────────────────────────────────────────────
+// Admin portal — email/password login (admin table)
+// ──────────────────────────────────────────────
+const isBcryptHash = (v) => typeof v === 'string' && /^\$2[aby]\$/.test(v)
+
+exports.adminLogin = async (req, res) => {
+  const { email, password } = req.body
+
+  const [rows] = await db.query(
+    'SELECT id, email, password, role, status FROM admin WHERE email = ? LIMIT 1',
+    [email.toLowerCase().trim()]
+  )
+
+  // Generic message — don't reveal whether the email exists
+  if (!rows.length) {
+    logger.warn('Admin login: unknown email', { email })
+    return unauthorized(res, 'Invalid email or password')
+  }
+
+  const account = rows[0]
+
+  if (account.status !== 1) {
+    return fail(res, 403, 'This admin account is disabled', 'ACCOUNT_DISABLED')
+  }
+
+  // Only admin-type roles may use the portal (the table can also hold non-admin rows)
+  if (!account.role || account.role === 'user') {
+    return fail(res, 403, 'This account does not have admin access', 'NOT_ADMIN')
+  }
+
+  // Migration guard: seed rows store plaintext passwords. We refuse to authenticate
+  // anything that isn't a bcrypt hash — run scripts/create-admin.js to set a real one.
+  if (!isBcryptHash(account.password)) {
+    logger.error('Admin login blocked: password not hashed', { admin_id: account.id })
+    return fail(
+      res,
+      403,
+      'This account needs a secure password set by an administrator before sign-in',
+      'PASSWORD_RESET_REQUIRED'
+    )
+  }
+
+  const valid = await bcrypt.compare(password, account.password)
+  if (!valid) {
+    logger.warn('Admin login: bad password', { admin_id: account.id })
+    return unauthorized(res, 'Invalid email or password')
+  }
+
+  const token = jwt.sign(
+    { id: account.id, email: account.email, role: 'admin', admin_role: account.role, kind: 'admin' },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
+  )
+
+  logger.info('Admin logged in', { admin_id: account.id, role: account.role })
+
+  return ok(res, {
+    token,
+    user: {
+      id: account.id,
+      name: account.email.split('@')[0],
+      email: account.email,
+      mobile: '',
+      role: 'admin',
+      admin_role: account.role
+    }
+  })
+}

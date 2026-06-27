@@ -22,6 +22,7 @@ router.delete('/reviews/:id', asyncHandler(ctrl.deleteReview))
 
 // Products
 router.get('/products', asyncHandler(ctrl.listProducts))
+router.post('/products/bulk', asyncHandler(ctrl.bulkCreateProducts))
 router.get('/products/:id', asyncHandler(ctrl.getProduct))
 router.post('/products', productUpload, asyncHandler(ctrl.createProduct))
 router.put('/products/:id', productUpload, asyncHandler(ctrl.updateProduct))
@@ -29,6 +30,7 @@ router.delete('/products/:id', asyncHandler(ctrl.deleteProduct))
 
 // Orders
 router.get('/orders', asyncHandler(ctrl.listOrders))
+router.get('/orders/:id', asyncHandler(ctrl.getOrder))
 router.patch('/orders/:id', asyncHandler(ctrl.updateOrder))
 
 // Gold rate
