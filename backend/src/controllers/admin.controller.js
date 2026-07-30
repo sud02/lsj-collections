@@ -1,6 +1,7 @@
 const { z } = require('zod')
 const db = require('../config/db')
 const img = require('../config/images')
+const storage = require('../services/storage.service')
 const logger = require('../utils/logger')
 const { ok, notFound, badRequest } = require('../utils/response')
 const { toPositiveInt } = require('../utils/sanitize')
@@ -198,9 +199,16 @@ exports.getProduct = async (req, res) => {
   })
 }
 
-const collectFiles = (req) => {
-  const featured = req.files?.featured_image?.[0]?.filename || null
-  const additional = (req.files?.additional_images || []).map((f) => f.filename)
+// Streams uploaded image buffers to Cloudinary and returns their permanent URLs.
+// The URLs are stored directly in the DB; images.js passes any http(s) value through as-is.
+const collectFiles = async (req) => {
+  const featuredFile = req.files?.featured_image?.[0]
+  const additionalFiles = req.files?.additional_images || []
+  const featured = featuredFile ? await storage.uploadBuffer(featuredFile.buffer, 'product') : null
+  const additional = []
+  for (const f of additionalFiles) {
+    additional.push(await storage.uploadBuffer(f.buffer, 'product'))
+  }
   return { featured, additional }
 }
 
@@ -209,7 +217,7 @@ exports.createProduct = async (req, res) => {
   if (!parsed.success) return badRequest(res, parsed.error.issues[0].message, 'VALIDATION_ERROR')
   const data = parsed.data
 
-  const { featured, additional } = collectFiles(req)
+  const { featured, additional } = await collectFiles(req)
   if (!featured) return badRequest(res, 'Featured image is required', 'NO_FEATURED_IMAGE')
 
   const slug = data.slug ? slugify(data.slug) : slugify(data.product_name)
@@ -324,7 +332,7 @@ exports.updateProduct = async (req, res) => {
   const [exists] = await db.query('SELECT id, additional_images FROM products WHERE id = ?', [id])
   if (!exists.length) return notFound(res, 'Product not found')
 
-  const { featured, additional } = collectFiles(req)
+  const { featured, additional } = await collectFiles(req)
 
   const updates = []
   const params = []

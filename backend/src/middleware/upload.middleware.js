@@ -41,10 +41,16 @@ exports.reviewUpload = buildUploader('review').single('image')
 exports.testimonialUpload = buildUploader('testimonial').single('image')
 exports.customizationUpload = buildUploader('customization').single('image')
 
-// Admin product upload — featured + up to 8 additional images in one request
-const productUploader = buildUploader('product', 9)
-exports.productUpload = productUploader.fields([
+// Admin product upload — featured + up to 8 additional images in one request.
+// Uses in-memory storage so the controller can stream buffers to Cloudinary
+// (permanent hosting) instead of Railway's ephemeral disk.
+const productMemoryUploader = multer({
+  storage: multer.memoryStorage(),
+  fileFilter,
+  limits: { fileSize: MAX_SIZE, files: 9 }
+})
+exports.productUpload = productMemoryUploader.fields([
   { name: 'featured_image', maxCount: 1 },
   { name: 'additional_images', maxCount: 8 }
 ])
-exports.productSingleUpload = productUploader.single('image')
+exports.productSingleUpload = productMemoryUploader.single('image')
