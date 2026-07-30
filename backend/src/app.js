@@ -17,16 +17,18 @@ app.disable('x-powered-by')
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }))
 
-const allowedOrigins = [
+const staticAllowed = [
   'http://localhost:3000',
   'http://localhost:5173',
-  'https://lsjcollections.com',
-  'https://www.lsjcollections.com',
   ...(process.env.CORS_ALLOWED_ORIGINS || '')
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean)
 ]
+
+// Allow the apex and ANY subdomain of lsjcollections.com over https
+// (www, admin, media, …) — covers the storefront and the admin portal.
+const lsjDomainPattern = /^https:\/\/([a-z0-9-]+\.)?lsjcollections\.com$/i
 
 // Vercel previews get URLs like https://lsj-collections-git-feature-xyz.vercel.app
 // Match the project's subdomains automatically when VERCEL_PROJECT is set.
@@ -35,13 +37,19 @@ const vercelPattern = vercelProject
   ? new RegExp(`^https://${vercelProject}(-[a-z0-9-]+)?\\.vercel\\.app$`, 'i')
   : null
 
+const isAllowedOrigin = (origin) =>
+  staticAllowed.includes(origin) ||
+  lsjDomainPattern.test(origin) ||
+  Boolean(vercelPattern && vercelPattern.test(origin))
+
 app.use(
   cors({
     origin: (origin, cb) => {
-      if (!origin) return cb(null, true)
-      if (allowedOrigins.includes(origin)) return cb(null, true)
-      if (vercelPattern && vercelPattern.test(origin)) return cb(null, true)
-      cb(new Error(`Origin ${origin} not allowed by CORS`))
+      // Same-origin / server-to-server requests have no Origin header.
+      if (!origin || isAllowedOrigin(origin)) return cb(null, true)
+      // Deny gracefully — returning an Error here makes the CORS preflight 500.
+      logger.warn('CORS: blocked origin', { origin })
+      return cb(null, false)
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
