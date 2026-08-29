@@ -39,4 +39,22 @@ const uploadBuffer = (buffer, folder = 'product') =>
     stream.end(buffer)
   })
 
-module.exports = { cloudinary, hasCloudinary, uploadBuffer }
+/**
+ * Fetch a remote image URL server-side and re-host it on Cloudinary.
+ * Returns the permanent Cloudinary https URL (so the product no longer
+ * depends on the original link staying alive).
+ * @param {string} url    a PUBLIC, direct link to an image file
+ * @param {string} folder logical folder, e.g. "product"
+ */
+const uploadRemote = async (url, folder = 'product') => {
+  if (!hasCloudinary()) {
+    throw new Error('Image storage is not configured (missing CLOUDINARY_* env vars)')
+  }
+  const result = await cloudinary.uploader.upload(url, {
+    folder: `lsj/${folder}`,
+    resource_type: 'image'
+  })
+  return result.secure_url
+}
+
+module.exports = { cloudinary, hasCloudinary, uploadBuffer, uploadRemote }
