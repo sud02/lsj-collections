@@ -4,6 +4,7 @@ const img = require('../config/images')
 const { ok, paginated, notFound, buildPagination } = require('../utils/response')
 const { toPositiveInt, toFloat, escapeLike } = require('../utils/sanitize')
 const { productSelect } = require('../utils/sql')
+const { cleanName } = require('../utils/format')
 
 const SORT_MAP = {
   newest: 'p.created_at DESC',
@@ -35,8 +36,8 @@ const decorateProduct = (p) => {
     size_chart_url: img.product(p.size_chart),
     average_rating: p.average_rating !== undefined ? Number(p.average_rating) : undefined,
     review_count: p.review_count !== undefined ? Number(p.review_count) : undefined,
-    category_name: p.category_name || undefined,
-    subcategory_name: p.subcategory_name || undefined
+    category_name: cleanName(p.category_name) || undefined,
+    subcategory_name: cleanName(p.subcategory_name) || undefined
   }
 }
 

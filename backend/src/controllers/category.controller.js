@@ -3,14 +3,17 @@ const img = require('../config/images')
 const { ok, notFound, paginated, buildPagination } = require('../utils/response')
 const { toPositiveInt } = require('../utils/sanitize')
 const { productSelect } = require('../utils/sql')
+const { cleanName } = require('../utils/format')
 
 const decorateCategory = (c) => ({
   ...c,
+  name: cleanName(c.name),
   slug: c.slug || String(c.id),
   image_url: img.category(c.image)
 })
 const decorateSub = (s) => ({
   ...s,
+  name: cleanName(s.name),
   category_id: parseInt(s.category_id, 10) || s.category_id,
   slug: s.slug || String(s.id),
   image_url: img.subcategory(s.image)

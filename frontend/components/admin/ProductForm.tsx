@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import api from "@/lib/api";
 
 interface RefData {
-  categories: { id: number; name: string }[];
+  categories: { id: number; name: string; product_count?: number }[];
   subcategories: { id: number; category_id: string; name: string }[];
   ornaments: { id: number; name: string; price: string }[];
 }
@@ -138,7 +138,11 @@ export default function ProductForm({ mode, initial }: Props) {
           <Field label="Category *">
             <select name="category_id" required value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={inputCls}>
               <option value="">Select category</option>
-              {ref.categories.map((c) => <option key={c.id} value={c.id}>{c.name.trim()}</option>)}
+              {ref.categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name.trim()}{typeof c.product_count === "number" ? ` (${c.product_count})` : ""}
+                </option>
+              ))}
             </select>
           </Field>
           <Field label="Subcategory">

@@ -1,49 +1,81 @@
 "use client";
 import { useEffect, useState } from "react";
-import Image from "next/image";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import api from "@/lib/api";
 import { Category, SubCategory, Product } from "@/types/product";
 import Breadcrumb from "@/components/ui/Breadcrumb";
 import ProductGrid from "@/components/product/ProductGrid";
 import Spinner from "@/components/ui/Spinner";
+import { cn } from "@/lib/utils";
 
 export default function CategoryPage() {
   const params = useParams();
   const id = Number(params.id);
   const [category, setCategory] = useState<Category | null>(null);
   const [subs, setSubs] = useState<SubCategory[]>([]);
+  const [activeSub, setActiveSub] = useState<number | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<"subs" | "products">("subs");
+  const [productsLoading, setProductsLoading] = useState(false);
 
+  // Load category meta (name + subcategories) once
   useEffect(() => {
-    const load = async () => {
+    let alive = true;
+    (async () => {
       setLoading(true);
       try {
         const { data: cats } = await api.get<Category[]>("/categories");
+        if (!alive) return;
         const current = cats.find((c) => c.id === id) || null;
         setCategory(current);
-        const subList = current?.subcategories || [];
-        setSubs(subList);
-        if (subList.length === 0) {
-          const { data } = await api.get<Product[]>("/products", {
-            params: { category: id },
-          });
-          setProducts(data);
-          setView("products");
-        } else {
-          setView("subs");
-        }
+        setSubs(current?.subcategories || []);
       } catch {
-        setCategory(null);
+        if (alive) setCategory(null);
       } finally {
-        setLoading(false);
+        if (alive) setLoading(false);
       }
+    })();
+    return () => {
+      alive = false;
     };
-    load();
   }, [id]);
+
+  // Load products — all in the category, or filtered by the selected subcategory
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      setProductsLoading(true);
+      try {
+        const paramsObj = activeSub
+          ? { subcategory: activeSub, limit: 60 }
+          : { category: id, limit: 60 };
+        const { data } = await api.get<Product[]>("/products", { params: paramsObj });
+        if (alive) setProducts(data);
+      } catch {
+        if (alive) setProducts([]);
+      } finally {
+        if (alive) setProductsLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [id, activeSub]);
+
+  const chip = (label: string, value: number | null) => (
+    <button
+      key={value ?? "all"}
+      onClick={() => setActiveSub(value)}
+      className={cn(
+        "px-4 py-1.5 rounded-pill text-sm border transition-colors whitespace-nowrap",
+        activeSub === value
+          ? "bg-gold text-white border-gold"
+          : "bg-white text-dark border-border hover:border-gold hover:text-gold"
+      )}
+    >
+      {label}
+    </button>
+  );
 
   return (
     <div className="bg-cream min-h-screen">
@@ -55,42 +87,28 @@ export default function CategoryPage() {
           ]}
         />
 
-        <div className="mt-2 mb-8">
+        <div className="mt-2 mb-6">
           <h1 className="font-serif text-3xl md:text-4xl text-dark">
             {category?.name || "Category"}
           </h1>
           <div className="w-16 h-[2px] bg-gold mt-2" />
         </div>
 
+        {/* Subcategory filters */}
+        {subs.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-8">
+            {chip("All", null)}
+            {subs.map((s) => chip(s.name, s.id))}
+          </div>
+        )}
+
         {loading ? (
           <div className="flex justify-center py-20">
             <Spinner size={32} />
           </div>
-        ) : view === "subs" && subs.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {subs.map((s) => (
-              <Link
-                key={s.id}
-                href={`/products?subcategory=${s.id}`}
-                className="group relative h-64 rounded-lg overflow-hidden border border-border"
-              >
-                {s.image_url && (
-                  <Image
-                    src={s.image_url}
-                    alt={s.name}
-                    fill
-                    sizes="(max-width: 768px) 50vw, 25vw"
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent group-hover:from-black/80 transition-all" />
-                <div className="absolute inset-x-0 bottom-0 p-4">
-                  <h3 className="font-serif text-lg text-white">{s.name}</h3>
-                  <div className="w-10 h-[2px] bg-gold mt-2 group-hover:w-16 transition-all" />
-                  <p className="text-xs text-white/80 mt-1">Shop collection →</p>
-                </div>
-              </Link>
-            ))}
+        ) : productsLoading ? (
+          <div className="flex justify-center py-20">
+            <Spinner size={28} />
           </div>
         ) : products.length > 0 ? (
           <ProductGrid products={products} columns={4} />
@@ -99,14 +117,10 @@ export default function CategoryPage() {
             <h3 className="font-serif text-2xl text-dark">Coming Soon</h3>
             <div className="gold-divider" />
             <p className="text-sm text-gray">
-              This collection is being curated. Please check back shortly.
+              {activeSub
+                ? "No products in this subcategory yet."
+                : "This collection is being curated. Please check back shortly."}
             </p>
-            <Link
-              href="/products"
-              className="inline-block mt-6 btn-outline"
-            >
-              Browse All Products
-            </Link>
           </div>
         )}
       </div>

@@ -2,6 +2,7 @@ const { z } = require('zod')
 const db = require('../config/db')
 const img = require('../config/images')
 const storage = require('../services/storage.service')
+const { cleanName } = require('../utils/format')
 const logger = require('../utils/logger')
 const { ok, notFound, badRequest } = require('../utils/response')
 const { toPositiveInt } = require('../utils/sanitize')
@@ -171,8 +172,8 @@ exports.listProducts = async (req, res) => {
     mrp: Number(p.mrp) || 0,
     featured_image_url: img.product(p.featured_image),
     additional_image_urls: img.productMultiple(p.additional_images),
-    category_name: p.category_name,
-    subcategory_name: p.subcategory_name
+    category_name: cleanName(p.category_name),
+    subcategory_name: cleanName(p.subcategory_name)
   })))
 }
 
@@ -524,8 +525,19 @@ exports.updateGoldRate = async (req, res) => {
 // Reference data (for product form selects)
 // ──────────────────────────────────────────────
 exports.referenceData = async (_req, res) => {
-  const [categories] = await db.query('SELECT id, name FROM categories WHERE status = 1 ORDER BY name')
+  const [categories] = await db.query(
+    `SELECT c.id, c.name, COUNT(p.id) AS product_count
+     FROM categories c
+     LEFT JOIN products p ON p.category_id = c.id AND p.status = 1
+     WHERE c.status = 1
+     GROUP BY c.id, c.name
+     ORDER BY c.name`
+  )
   const [subcategories] = await db.query('SELECT id, category_id, name FROM sub_categories WHERE status = 1 ORDER BY name')
   const [ornaments] = await db.query('SELECT id, name, price FROM ornaments WHERE status = 1 ORDER BY name')
-  return ok(res, { categories, subcategories, ornaments })
+  return ok(res, {
+    categories: categories.map((c) => ({ ...c, name: cleanName(c.name), product_count: Number(c.product_count) || 0 })),
+    subcategories: subcategories.map((s) => ({ ...s, name: cleanName(s.name) })),
+    ornaments
+  })
 }
