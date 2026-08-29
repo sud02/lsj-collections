@@ -200,7 +200,18 @@ export default function ProductForm({ mode, initial }: Props) {
           {isEdit && initial?.featured_image_url && !featured && (
             <img src={initial.featured_image_url} alt="" className="w-20 h-20 rounded object-cover mb-2 border border-border" />
           )}
-          <input ref={featuredInput} type="file" accept="image/*" hidden onChange={(e) => setFeatured(e.target.files?.[0] || null)} />
+          <input
+            ref={featuredInput}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0] || null;
+              setFeatured(f);
+              // Adding an image to a draft should publish it — pre-tick Active (still overridable).
+              if (f && isEdit) setActive(true);
+            }}
+          />
           <div className="flex items-center gap-3">
             <button type="button" onClick={() => featuredInput.current?.click()} className="px-4 py-2 border border-border rounded text-sm hover:bg-gray-light inline-flex items-center gap-2">
               <Upload className="w-3.5 h-3.5" /> Choose file
