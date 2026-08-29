@@ -7,6 +7,6 @@ const { asyncHandler } = require('../utils/response')
 
 router.post('/initiate', auth, paymentLimiter, validate(ctrl.initiateSchema), asyncHandler(ctrl.initiate))
 router.post('/callback', asyncHandler(ctrl.callback))
-router.get('/status/:txnId', asyncHandler(ctrl.checkStatus))
+router.get('/status/:orderId', auth, asyncHandler(ctrl.checkStatus))
 
 module.exports = router
