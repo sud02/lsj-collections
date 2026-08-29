@@ -21,6 +21,18 @@ import { checkoutFormSchema, CheckoutFormValues } from "@/components/checkout/sc
 import { ShoppingBag } from "lucide-react";
 import { computeTotals } from "@/lib/utils";
 
+// The order API expects name/address1/pincode; the form uses full_name/address_line1/pin_code.
+const toApiAddress = (a?: Partial<CheckoutFormValues["billing"]>) => ({
+  name: a?.full_name || "",
+  email: a?.email || "",
+  mobile: a?.mobile || "",
+  address1: a?.address_line1 || "",
+  address2: a?.address_line2 || "",
+  city: a?.city || "",
+  state: a?.state || "",
+  pincode: a?.pin_code || "",
+});
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, total, clearCart } = useCartStore();
@@ -63,12 +75,11 @@ export default function CheckoutPage() {
     }
     setSubmitting(true);
     try {
-      const totals = computeTotals(total, coupon?.discount || 0);
-      const { data: order } = await api.post<{ id: number; grand_total: number }>(
+      const { data: order } = await api.post<{ order_id: number; grandtotal: number }>(
         "/orders",
         {
-          billing: values.billing,
-          shipping: values.ship_different ? values.shipping : values.billing,
+          billing: toApiAddress(values.billing),
+          shipping: toApiAddress(values.ship_different ? values.shipping : values.billing),
           items: items.map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
           coupon_code: coupon?.code,
         }
@@ -76,11 +87,7 @@ export default function CheckoutPage() {
 
       const { data: payment } = await api.post<{ redirect_url: string }>(
         "/payment/initiate",
-        {
-          order_id: order.id,
-          amount: Math.round(totals.grand_total * 100),
-          mobile: values.billing.mobile,
-        }
+        { order_id: order.order_id }
       );
 
       await clearCart();
@@ -88,7 +95,7 @@ export default function CheckoutPage() {
       if (payment.redirect_url) {
         window.location.href = payment.redirect_url;
       } else {
-        router.push(`/order-success/${order.id}`);
+        router.push(`/order-success/${order.order_id}`);
       }
     } catch (err: unknown) {
       const message =
