@@ -18,7 +18,6 @@ interface PreviewRow {
   category: string;
   ornament_type: string;
   weight: string;
-  image_url?: string;
   // resolved payload (when valid)
   payload?: Record<string, string | number | null>;
   error?: string;
@@ -36,14 +35,12 @@ const TEMPLATE_HEADERS = [
   "stock",
   "short_description",
   "description",
-  "image_url",
-  "extra_image_urls",
   "flags",
 ];
 
 const TEMPLATE_SAMPLE = [
-  "22K Lakshmi Coin Necklace,,Necklaces,,22K Gold,22.5,8,1200,3,Festive coin necklace,Detailed description here,https://example.com/necklace.jpg,,popular",
-  "Silver Kada,,Bangles,,Silver,40,0,500,10,Classic silver kada,,https://example.com/kada.jpg,https://example.com/kada-2.jpg|https://example.com/kada-3.jpg,recommended|lakshmi_kubera",
+  "22K Lakshmi Coin Necklace,,Necklaces,,22K Gold,22.5,8,1200,3,Festive coin necklace,Detailed description here,popular",
+  "Silver Kada,,Bangles,,Silver,40,0,500,10,Classic silver kada,,recommended,lakshmi_kubera",
 ];
 
 const norm = (s: string) => s.trim().toLowerCase();
@@ -53,11 +50,7 @@ export default function BulkUploadPage() {
   const [rows, setRows] = useState<PreviewRow[]>([]);
   const [fileName, setFileName] = useState("");
   const [importing, setImporting] = useState(false);
-  const [result, setResult] = useState<{
-    created: number;
-    failed: { row: number; reason: string }[];
-    warnings?: { row: number; reason: string }[];
-  } | null>(null);
+  const [result, setResult] = useState<{ created: number; failed: { row: number; reason: string }[] } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -105,12 +98,9 @@ export default function BulkUploadPage() {
     if (subName && !sub) return { ...base, error: `Unknown subcategory "${subName}" for ${categoryName}` };
 
     const flags = get("flags").split(/[,;|]/).map(norm);
-    const imageUrl = get("image_url");
-    const extraImageUrls = get("extra_image_urls");
 
     return {
       ...base,
-      image_url: imageUrl,
       payload: {
         product_name,
         product_code: get("product_code") || "",
@@ -123,8 +113,6 @@ export default function BulkUploadPage() {
         stock: get("stock") || "1",
         short_description: get("short_description") || "",
         description: get("description") || "",
-        image_url: imageUrl,
-        extra_image_urls: extraImageUrls,
         is_lakshmi_kubera: flags.includes("lakshmi_kubera") ? "1" : "0",
         is_popular_collection: flags.includes("popular") ? "1" : "0",
         is_recommended: flags.includes("recommended") ? "1" : "0",
@@ -154,18 +142,12 @@ export default function BulkUploadPage() {
     if (!valid.length) return;
     setImporting(true);
     try {
-      // Re-hosting each image URL on Cloudinary takes time, so allow a long timeout.
-      const { data } = await api.post<{
-        created: number;
-        failed: { row: number; reason: string }[];
-        warnings?: { row: number; reason: string }[];
-      }>(
+      const { data } = await api.post<{ created: number; failed: { row: number; reason: string }[] }>(
         "/admin/products/bulk",
-        { rows: valid.map((r) => r.payload) },
-        { timeout: 240000 }
+        { rows: valid.map((r) => r.payload) }
       );
       setResult(data);
-      toast.success(`Imported ${data.created} product${data.created === 1 ? "" : "s"}`);
+      toast.success(`Imported ${data.created} product${data.created === 1 ? "" : "s"} as drafts`);
       setRows([]);
       setFileName("");
     } catch (e) {
@@ -183,9 +165,8 @@ export default function BulkUploadPage() {
         </Link>
         <h1 className="font-serif text-3xl text-dark">Bulk upload products</h1>
         <p className="text-sm text-gray mt-1">
-          Import many products at once from a CSV. Rows with an{" "}
-          <code className="text-dark">image_url</code> are published live (the image is copied to permanent hosting);
-          rows without one are saved as <span className="font-medium text-dark">drafts</span> — add an image via Edit to publish.
+          Import many products at once from a CSV. Imported products are saved as{" "}
+          <span className="font-medium text-dark">drafts (inactive)</span> — add a featured image via Edit to publish them.
         </p>
       </div>
 
@@ -206,14 +187,8 @@ export default function BulkUploadPage() {
           <code>product_name</code> (required), <code>product_code</code>, <code>category</code> (required, must match an
           existing category name), <code>subcategory</code>, <code>ornament_type</code> (required, must match a metal name),{" "}
           <code>ornament_weight</code> (required), <code>discount_percentage</code>, <code>miscalleneous_price</code>,{" "}
-          <code>stock</code>, <code>short_description</code>, <code>description</code>, <code>image_url</code>,{" "}
-          <code>extra_image_urls</code>, <code>flags</code> (list of <code>popular</code>, <code>recommended</code>,{" "}
-          <code>lakshmi_kubera</code>, separated by <code>|</code>).
-        </p>
-        <p className="mt-2">
-          <span className="font-medium text-dark">image_url</span> must be a <span className="font-medium text-dark">public, direct link to an image file</span>{" "}
-          (ends in .jpg/.png, opens the raw image in a browser). Multiple <span className="font-medium text-dark">extra_image_urls</span> are separated by <code>|</code>.
-          Google Drive/Dropbox <em>share</em> links won&apos;t work — use a direct file link.
+          <code>stock</code>, <code>short_description</code>, <code>description</code>, <code>flags</code> (comma list of{" "}
+          <code>popular</code>, <code>recommended</code>, <code>lakshmi_kubera</code>).
         </p>
       </div>
 
@@ -239,7 +214,6 @@ export default function BulkUploadPage() {
                   <th className="px-3 py-2">Category</th>
                   <th className="px-3 py-2">Metal</th>
                   <th className="px-3 py-2">Weight</th>
-                  <th className="px-3 py-2">Image</th>
                   <th className="px-3 py-2">Status</th>
                 </tr>
               </thead>
@@ -251,13 +225,6 @@ export default function BulkUploadPage() {
                     <td className="px-3 py-2">{r.category}</td>
                     <td className="px-3 py-2">{r.ornament_type}</td>
                     <td className="px-3 py-2">{r.weight}</td>
-                    <td className="px-3 py-2 text-xs">
-                      {r.image_url ? (
-                        <span className="text-teal-dark">URL</span>
-                      ) : (
-                        <span className="text-gray-mid">draft</span>
-                      )}
-                    </td>
                     <td className="px-3 py-2">
                       {r.error ? (
                         <span className="text-red-600 text-xs">{r.error}</span>
@@ -282,7 +249,7 @@ export default function BulkUploadPage() {
       {result && (
         <div className="border border-border rounded-lg p-5 space-y-2">
           <p className="text-sm text-dark font-medium inline-flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-teal" /> {result.created} product{result.created === 1 ? "" : "s"} imported
+            <CheckCircle2 className="w-4 h-4 text-teal" /> {result.created} product{result.created === 1 ? "" : "s"} imported as drafts
           </p>
           {result.failed.length > 0 && (
             <div className="text-xs text-red-600">
@@ -294,24 +261,9 @@ export default function BulkUploadPage() {
               </ul>
             </div>
           )}
-          {result.warnings && result.warnings.length > 0 && (
-            <div className="text-xs text-gold-dark">
-              <p className="font-medium">{result.warnings.length} image issue{result.warnings.length === 1 ? "" : "s"} (product still created as draft):</p>
-              <ul className="list-disc ml-5">
-                {result.warnings.map((w, i) => (
-                  <li key={i}>Row {w.row}: {w.reason}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <div className="flex gap-4 mt-2">
-            <Link href="/admin/products?status=active" className="text-sm text-gold-dark hover:underline">
-              View published products →
-            </Link>
-            <Link href="/admin/products?status=inactive" className="text-sm text-gray hover:underline">
-              View drafts →
-            </Link>
-          </div>
+          <Link href="/admin/products?status=inactive" className="text-sm text-gold-dark hover:underline inline-block mt-2">
+            View draft products →
+          </Link>
         </div>
       )}
     </div>

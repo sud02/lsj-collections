@@ -247,10 +247,9 @@ exports.createProduct = async (req, res) => {
   return ok(res, { id: r.insertId, slug, message: 'Product created' }, 201)
 }
 
-// Bulk import. Rows may carry image_url / extra_image_urls (public direct links);
-// those are re-hosted on Cloudinary. A product with a featured image is created
-// ACTIVE; a row with no (or a failed) image is created as a DRAFT (status 0) so
-// the storefront isn't broken — the admin can add an image later via Edit.
+// Bulk import — text/numeric fields only. Products are created as DRAFTS
+// (status 0, no images) so the storefront isn't broken; admin adds an image
+// via the edit page, which flips the product active.
 const bulkRowSchema = z.object({
   product_name: z.string().min(2).max(250),
   product_code: z.string().max(100).optional().or(z.literal('')),
@@ -267,9 +266,7 @@ const bulkRowSchema = z.object({
   stock: z.coerce.string().max(50).optional(),
   is_lakshmi_kubera: z.coerce.string().optional(),
   is_popular_collection: z.coerce.string().optional(),
-  is_recommended: z.coerce.string().optional(),
-  image_url: z.string().url().max(1000).optional().or(z.literal('')),
-  extra_image_urls: z.string().max(4000).optional().or(z.literal(''))
+  is_recommended: z.coerce.string().optional()
 })
 
 const MAX_BULK_ROWS = 500
@@ -285,7 +282,6 @@ exports.bulkCreateProducts = async (req, res) => {
 
   const created = []
   const failed = []
-  const warnings = []
 
   for (let i = 0; i < rows.length; i++) {
     const parsed = bulkRowSchema.safeParse(rows[i])
@@ -296,32 +292,6 @@ exports.bulkCreateProducts = async (req, res) => {
     const d = parsed.data
     const slug = d.slug ? slugify(d.slug) : slugify(d.product_name)
     const code = d.product_code || `LSJ-${Date.now()}-${i}`
-
-    // Re-host any provided image URLs on Cloudinary (best-effort).
-    let featured = ''
-    const additional = []
-    if (d.image_url) {
-      try {
-        featured = await storage.uploadRemote(d.image_url, 'product')
-      } catch (err) {
-        warnings.push({ row: i + 1, reason: `Featured image failed: ${err.message}` })
-      }
-    }
-    const extras = (d.extra_image_urls || '')
-      .split(/[|,\n]/)
-      .map((u) => u.trim())
-      .filter(Boolean)
-    for (const u of extras) {
-      try {
-        additional.push(await storage.uploadRemote(u, 'product'))
-      } catch (err) {
-        warnings.push({ row: i + 1, reason: `Extra image failed: ${err.message}` })
-      }
-    }
-
-    // Active only when it actually has a featured image; otherwise a draft.
-    const status = featured ? 1 : 0
-
     try {
       const [r] = await db.query(
         `INSERT INTO products (
@@ -334,24 +304,22 @@ exports.bulkCreateProducts = async (req, res) => {
         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())`,
         [
           code, d.product_name, slug, d.category_id, d.subcategory_id || null,
-          featured, additional.join(','), d.ornament_type, d.ornament_weight,
+          '', '', d.ornament_type, d.ornament_weight,
           d.discount_percentage || '0', d.miscalleneous_price || '0',
           d.short_description || '', d.description || '',
           d.features || '', '', '', d.stock || '1',
           d.is_lakshmi_kubera || '0', d.is_popular_collection || '0', d.is_recommended || '0',
-          status
+          0 // draft until an image is added
         ]
       )
-      created.push({ row: i + 1, id: r.insertId, product_name: d.product_name, active: status === 1 })
+      created.push({ row: i + 1, id: r.insertId, product_name: d.product_name })
     } catch (err) {
       failed.push({ row: i + 1, reason: err.code === 'ER_DUP_ENTRY' ? 'Duplicate product code/slug' : 'Database error' })
     }
   }
 
-  logger.info('Admin bulk product import', {
-    admin_id: req.user.id, created: created.length, failed: failed.length, image_warnings: warnings.length
-  })
-  return ok(res, { created: created.length, failed, warnings, created_items: created }, 201)
+  logger.info('Admin bulk product import', { admin_id: req.user.id, created: created.length, failed: failed.length })
+  return ok(res, { created: created.length, failed, created_items: created }, 201)
 }
 
 exports.updateProduct = async (req, res) => {
