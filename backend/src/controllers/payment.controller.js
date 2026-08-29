@@ -6,8 +6,17 @@ const logger = require('../utils/logger')
 const { ok, notFound, fail, badRequest } = require('../utils/response')
 
 exports.initiateSchema = z.object({
-  order_id: z.number().int().positive()
+  order_id: z.number().int().positive(),
+  origin: z.string().max(200).optional()
 })
+
+// Where PhonePe returns the customer. Prefer the caller's real origin (so it
+// works on any domain), but only if it's one we trust — else the env fallback.
+const ALLOWED_ORIGIN = /^https?:\/\/(localhost:\d+|(?:[a-z0-9-]+\.)?lsjcollections\.com)$/i
+const resolveRedirectBase = (origin) => {
+  if (origin && ALLOWED_ORIGIN.test(origin.trim())) return origin.trim().replace(/\/+$/, '')
+  return (process.env.FRONTEND_URL || '').replace(/\/+$/, '')
+}
 
 // Applies a resolved payment state to an order exactly once (idempotent):
 // updates status, and on first success clears the cart + emails the customer.
@@ -62,7 +71,7 @@ exports.initiate = async (req, res) => {
 
   // Unique per attempt so a retry never collides with a used merchantOrderId.
   const merchantOrderId = `LSJ-${order.id}-${Date.now()}`
-  const redirectUrl = `${process.env.FRONTEND_URL}/order-success/${order.id}`
+  const redirectUrl = `${resolveRedirectBase(req.body.origin)}/order-success/${order.id}`
 
   const data = await phonepe.createPayment({ merchantOrderId, amountPaise, redirectUrl })
 

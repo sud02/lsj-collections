@@ -10,7 +10,7 @@ import Button from "@/components/ui/Button";
 import Spinner from "@/components/ui/Spinner";
 import { formatINR, formatDate } from "@/lib/utils";
 
-type PayState = "paid" | "failed" | "pending" | "unknown";
+type PayState = "paid" | "failed" | "pending" | "unresolved" | "unknown";
 
 export default function OrderSuccessPage() {
   const params = useParams();
@@ -32,52 +32,71 @@ export default function OrderSuccessPage() {
     }
   }, [id]);
 
-  useEffect(() => {
-    let alive = true;
-    let timer: ReturnType<typeof setTimeout>;
+  const runningRef = useRef(false);
 
-    const run = async () => {
+  const poll = useCallback(async () => {
+    if (runningRef.current) return;
+    runningRef.current = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const step = async () => {
       const s = await checkStatus();
-      if (!alive) return;
-      setPayState(s);
-      // Webhook may lag the redirect — poll a few times while pending.
       if (s === "pending" && polls.current < 5) {
         polls.current += 1;
-        timer = setTimeout(run, 3000);
+        setPayState("pending");
+        timer = setTimeout(step, 3000);
+      } else {
+        // Polled out but still pending → surface an actionable "unresolved" state.
+        setPayState(s === "pending" ? "unresolved" : s);
+        runningRef.current = false;
       }
     };
+    await step();
+    return () => clearTimeout(timer);
+  }, [checkStatus]);
 
+  useEffect(() => {
+    let alive = true;
     Promise.all([
       api.get<Order>(`/orders/${id}`).then((r) => alive && setOrder(r.data)).catch(() => {}),
-      run(),
+      poll(),
     ]).finally(() => alive && setLoading(false));
-
     return () => {
       alive = false;
-      clearTimeout(timer);
     };
-  }, [id, checkStatus]);
+  }, [id, poll]);
+
+  const checkAgain = () => {
+    polls.current = 0;
+    runningRef.current = false;
+    setPayState("pending");
+    poll();
+  };
 
   const retryPayment = async () => {
     setRetrying(true);
     try {
       const { data } = await api.post<{ redirect_url: string }>("/payment/initiate", {
         order_id: Number(id),
+        origin: window.location.origin,
       });
       if (data.redirect_url) window.location.href = data.redirect_url;
+      else setRetrying(false);
     } catch {
       setRetrying(false);
     }
   };
 
   const isPaid = payState === "paid";
-  const isFailed = payState === "failed";
-  const isPending = payState === "pending" || payState === "unknown";
+  const isPending = payState === "pending";
+  // failed / unresolved / unknown are all "not confirmed" → offer retry + re-check.
+  const needsAction = payState === "failed" || payState === "unresolved" || payState === "unknown";
 
   const head = isPaid
     ? { color: "bg-green-500", icon: <Check strokeWidth={3} className="w-12 h-12" />, title: "Order Placed Successfully!", sub: "Thank you for shopping with LSJ Collections. We've sent a confirmation to your registered email." }
-    : isFailed
+    : payState === "failed"
     ? { color: "bg-red-500", icon: <X strokeWidth={3} className="w-12 h-12" />, title: "Payment Failed", sub: "Your payment didn't go through and you have not been charged. You can try again below." }
+    : needsAction
+    ? { color: "bg-gold-dark", icon: <X strokeWidth={3} className="w-12 h-12" />, title: "Payment Not Completed", sub: "We couldn't confirm your payment. If money was deducted it will be auto-refunded. You can retry or re-check the status below." }
     : { color: "bg-gold", icon: <Loader2 className="w-12 h-12 animate-spin" />, title: "Confirming your payment…", sub: "This can take a few seconds. Please don't close this page." };
 
   return (
@@ -120,7 +139,15 @@ export default function OrderSuccessPage() {
                 </div>
                 <div>
                   <p className="text-gray">Payment</p>
-                  <p className="text-dark font-medium capitalize">{payState === "unknown" ? "processing" : payState}</p>
+                  <p className="text-dark font-medium capitalize">
+                    {payState === "paid"
+                      ? "paid"
+                      : payState === "failed"
+                      ? "failed"
+                      : payState === "pending"
+                      ? "processing"
+                      : "not completed"}
+                  </p>
                 </div>
               </div>
             </div>
@@ -130,15 +157,22 @@ export default function OrderSuccessPage() {
             </p>
           )}
 
-          {isFailed ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Button fullWidth loading={retrying} onClick={retryPayment} leftIcon={<RefreshCw className="w-4 h-4" />}>
-                Retry Payment
-              </Button>
-              <Link href="/account">
-                <Button fullWidth variant="outline">View My Orders</Button>
+          {needsAction ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Button fullWidth loading={retrying} onClick={retryPayment} leftIcon={<RefreshCw className="w-4 h-4" />}>
+                  Retry Payment
+                </Button>
+                <Button fullWidth variant="outline" onClick={checkAgain}>
+                  I&apos;ve paid — check again
+                </Button>
+              </div>
+              <Link href="/account" className="block">
+                <Button fullWidth variant="ghost">View My Orders</Button>
               </Link>
             </div>
+          ) : isPending ? (
+            <p className="text-xs text-gray">Please wait — do not refresh or close this page.</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Link href="/account">

@@ -87,7 +87,7 @@ export default function CheckoutPage() {
 
       const { data: payment } = await api.post<{ redirect_url: string }>(
         "/payment/initiate",
-        { order_id: order.order_id }
+        { order_id: order.order_id, origin: window.location.origin }
       );
 
       await clearCart();
