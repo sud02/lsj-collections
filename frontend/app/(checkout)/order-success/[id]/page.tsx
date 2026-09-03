@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Check, Package, ArrowRight, X, Loader2, RefreshCw } from "lucide-react";
 import api from "@/lib/api";
-import { Order } from "@/types/order";
+import { Order, OrderDetailResponse } from "@/types/order";
 import Button from "@/components/ui/Button";
 import Spinner from "@/components/ui/Spinner";
 import { formatINR, formatDate } from "@/lib/utils";
@@ -57,7 +57,11 @@ export default function OrderSuccessPage() {
   useEffect(() => {
     let alive = true;
     Promise.all([
-      api.get<Order>(`/orders/${id}`).then((r) => alive && setOrder(r.data)).catch(() => {}),
+      // GET /orders/:id returns { order, items } — the order is nested, not the body.
+      api
+        .get<OrderDetailResponse>(`/orders/${id}`)
+        .then((r) => alive && setOrder(r.data.order))
+        .catch(() => {}),
       poll(),
     ]).finally(() => alive && setLoading(false));
     return () => {
@@ -127,11 +131,11 @@ export default function OrderSuccessPage() {
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div>
                   <p className="text-gray">Order ID</p>
-                  <p className="text-dark font-medium">#{order.order_number || order.id}</p>
+                  <p className="text-dark font-medium">{order.order_id || `#${order.id}`}</p>
                 </div>
                 <div>
                   <p className="text-gray">{isPaid ? "Amount Paid" : "Amount"}</p>
-                  <p className="text-gold font-serif text-base">{formatINR(order.grand_total)}</p>
+                  <p className="text-gold font-serif text-base">{formatINR(Number(order.grandtotal))}</p>
                 </div>
                 <div>
                   <p className="text-gray">Placed On</p>

@@ -25,6 +25,11 @@ const send = async ({ to, subject, html, replyTo }) => {
       html,
       reply_to: replyTo
     })
+    // The SDK reports API failures in `result.error` rather than throwing.
+    if (result?.error) {
+      logger.error('Email send failed', { to, subject, message: result.error.message })
+      return { error: result.error.message || 'Email send failed' }
+    }
     logger.info('Email sent', { to, subject, id: result?.data?.id })
     return result
   } catch (err) {
@@ -39,6 +44,46 @@ const escape = (s) =>
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
+
+exports.sendLoginOtp = async ({ to, code, minutes = 10 }) => {
+  const spaced = String(code).split('').join('&nbsp;&nbsp;')
+
+  const html = `
+  <!DOCTYPE html>
+  <html><body style="font-family:Arial,sans-serif;background:#fafafa;padding:24px;color:#222;">
+    <div style="max-width:480px;margin:auto;background:#fff;border:1px solid #eee;border-radius:8px;overflow:hidden;">
+      <div style="background:#8B0000;color:#fff;padding:20px 24px;text-align:center;">
+        <h1 style="margin:0;font-size:20px;">LSJ Collections</h1>
+        <p style="margin:6px 0 0;font-size:13px;opacity:.9;">Your sign-in code</p>
+      </div>
+      <div style="padding:28px 24px;text-align:center;">
+        <p style="margin:0 0 18px;font-size:14px;color:#444;">
+          Use this one-time password to sign in to your account.
+        </p>
+        <div style="display:inline-block;background:#f7f1e8;border:1px solid #e6d8c3;border-radius:8px;
+                    padding:16px 28px;font-size:30px;font-weight:bold;letter-spacing:4px;color:#8B0000;">
+          ${spaced}
+        </div>
+        <p style="margin:18px 0 0;font-size:13px;color:#666;">
+          The code expires in ${minutes} minutes and can be used once.
+        </p>
+        <p style="margin:14px 0 0;font-size:12px;color:#999;line-height:1.5;">
+          Didn't request this? You can safely ignore this email — nobody can sign in
+          without the code above.
+        </p>
+      </div>
+      <div style="background:#f7f1e8;padding:14px;text-align:center;font-size:12px;color:#666;">
+        © ${new Date().getFullYear()} LSJ Collections, Tirupati
+      </div>
+    </div>
+  </body></html>`
+
+  return send({
+    to,
+    subject: `${code} is your LSJ Collections sign-in code`,
+    html
+  })
+}
 
 exports.sendOrderConfirmation = async ({ order, items }) => {
   if (!order?.billing_email) return { skipped: true, reason: 'no email' }

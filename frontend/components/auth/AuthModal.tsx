@@ -1,32 +1,29 @@
 "use client";
 import { useState, useEffect } from "react";
 import Modal from "@/components/ui/Modal";
-import PhoneStep from "./PhoneStep";
+import EmailStep from "./EmailStep";
 import OTPStep from "./OTPStep";
 import ProfileStep from "./ProfileStep";
 import { useAuthStore } from "@/store/authStore";
 import { useCartStore } from "@/store/cartStore";
 import { useWishlistStore } from "@/store/wishlistStore";
-import { resetRecaptcha } from "@/lib/firebase";
-import type { ConfirmationResult } from "firebase/auth";
 
-type Step = "phone" | "otp" | "profile";
+type Step = "email" | "otp" | "profile";
 
 export default function AuthModal() {
   const { isModalOpen, closeAuthModal, isLoggedIn } = useAuthStore();
   const syncCart = useCartStore((s) => s.syncWithServer);
   const syncWishlist = useWishlistStore((s) => s.syncWithServer);
 
-  const [step, setStep] = useState<Step>("phone");
-  const [phone, setPhone] = useState("");
-  const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(null);
+  const [step, setStep] = useState<Step>("email");
+  const [email, setEmail] = useState("");
+  const [otpToken, setOtpToken] = useState("");
 
   useEffect(() => {
     if (!isModalOpen) {
-      setStep("phone");
-      setPhone("");
-      setConfirmation(null);
-      resetRecaptcha();
+      setStep("email");
+      setEmail("");
+      setOtpToken("");
     }
   }, [isModalOpen]);
 
@@ -39,24 +36,26 @@ export default function AuthModal() {
 
   return (
     <Modal open={isModalOpen} onClose={closeAuthModal} size="sm">
-      {step === "phone" && (
-        <PhoneStep
-          onSent={(c, p) => {
-            setConfirmation(c);
-            setPhone(p);
+      {step === "email" && (
+        <EmailStep
+          onSent={(res) => {
+            setEmail(res.email);
+            setOtpToken(res.otp_token);
             setStep("otp");
           }}
         />
       )}
       {step === "otp" && (
         <OTPStep
-          phone={phone}
-          confirmation={confirmation}
-          onBack={() => setStep("phone")}
+          email={email}
+          otpToken={otpToken}
+          onBack={() => setStep("email")}
+          onTokenRefresh={setOtpToken}
+          // First-time accounts land on the profile step to add a name + mobile.
           onComplete={(isNew) => (isNew ? setStep("profile") : closeAuthModal())}
         />
       )}
-      {step === "profile" && <ProfileStep onDone={closeAuthModal} />}
+      {step === "profile" && <ProfileStep email={email} onDone={closeAuthModal} />}
     </Modal>
   );
 }

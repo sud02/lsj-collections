@@ -15,9 +15,47 @@ const pool = mysql.createPool({
   timezone: 'Z'
 })
 
+/**
+ * Keep the two environments on their own data.
+ *
+ * Production must use the live database; development must not. Getting this
+ * backwards is silent and expensive in both directions — a local test writing a
+ * real customer row, or worse, production writing orders into the dev database
+ * where nobody would ever find them.
+ */
+const DEV_DB_PATTERN = /dev|test|local|staging/i
+
+const checkDatabaseEnvironment = () => {
+  const host = String(process.env.DB_HOST || '')
+  const name = String(process.env.DB_NAME || '')
+  const isProd = process.env.NODE_ENV === 'production'
+  const looksDev = DEV_DB_PATTERN.test(name) || /^(localhost|127\.0\.0\.1|::1)$/.test(host)
+
+  if (isProd && looksDev) {
+    // Fail fast rather than serve customers against throwaway data. On Render a
+    // crashed deploy is not promoted, so the previous release keeps running.
+    logger.error(
+      'Refusing to start: NODE_ENV=production but DB_NAME looks like a development ' +
+      'database. Point DB_NAME at the live database, or unset NODE_ENV=production.',
+      { host, db: name }
+    )
+    process.exit(1)
+  }
+
+  if (!isProd && !looksDev) {
+    logger.warn(
+      '⚠  Connected to the LIVE database in development — every sign-up and order ' +
+      'you create here is a real customer record. Run scripts/clone-to-dev.js and ' +
+      'point DB_NAME at the dev database.',
+      { host, db: name }
+    )
+  }
+}
+
 pool.getConnection()
   .then((conn) => {
     logger.info('MySQL connected', { host: process.env.DB_HOST, db: process.env.DB_NAME })
+    checkDatabaseEnvironment()
     conn.release()
   })
   .catch((err) => {

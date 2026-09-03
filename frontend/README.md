@@ -8,7 +8,7 @@ Premium hallmark jewellery e-commerce storefront built with Next.js 14 (App Rout
 - **TypeScript** — strict mode
 - **Tailwind CSS** — fully custom brand tokens (no UI library)
 - **Zustand** — auth / cart / wishlist state, persisted to `localStorage`
-- **Firebase Phone OTP** + JWT — authentication
+- **Email OTP** (codes emailed by the API via Resend) + JWT — authentication
 - **React Hook Form + Zod** — checkout validation
 - **Framer Motion** — micro-animations
 - **Embla Carousel** — hero & related-products sliders
@@ -20,7 +20,7 @@ Premium hallmark jewellery e-commerce storefront built with Next.js 14 (App Rout
 ```bash
 cd frontend
 npm install
-cp .env.example .env.local   # fill in Firebase + API keys
+cp .env.example .env.local   # fill in the API + PhonePe keys
 npm run dev
 ```
 
@@ -31,10 +31,6 @@ App runs on `http://localhost:3000`.
 ```env
 NEXT_PUBLIC_API_URL=https://api.lsjcollections.com/api
 NEXT_PUBLIC_CDN_URL=https://lsjcollections.com/panels/admin
-NEXT_PUBLIC_FIREBASE_API_KEY=
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=
-NEXT_PUBLIC_FIREBASE_APP_ID=
 NEXT_PUBLIC_PHONEPE_ENV=UAT
 ```
 
@@ -58,7 +54,7 @@ frontend/
 │
 ├── components/
 │   ├── layout/        — Header, Footer, AnnouncementBar, MobileBottomNav
-│   ├── auth/          — AuthModal + Phone/OTP/Profile steps
+│   ├── auth/          — AuthModal + Email/OTP/Profile steps
 │   ├── product/       — Card, Grid, Gallery, Variations, Reviews, Related, Filters
 │   ├── cart/          — CartItem, CartSummary, CartDrawer
 │   ├── checkout/      — Billing/Shipping forms, Coupon, OrderSummary, schema
@@ -67,7 +63,7 @@ frontend/
 │   ├── policy/        — Shared PolicyLayout
 │   └── ui/            — Button, Input, Modal, Breadcrumb, Badge, Spinner, EmptyState
 │
-├── lib/               — api (axios + interceptors), firebase, auth, utils
+├── lib/               — api (axios + interceptors), auth, utils (firebase.ts is a commented-out fallback)
 ├── store/             — Zustand stores (auth, cart, wishlist)
 └── types/             — Product, Cart, Order, User
 ```
@@ -89,12 +85,28 @@ Configured in `tailwind.config.ts` and `app/globals.css`:
 
 ## Authentication Flow
 
+Sign-in and sign-up are one flow — a 6-digit code emailed to the customer. There
+is no password, and no Firebase on the client.
+
 1. `Header` → Login button → `openAuthModal()`
-2. `PhoneStep` collects 10-digit mobile, prepends `+91`, sends OTP via Firebase
-3. `OTPStep` confirms code, gets Firebase ID token, exchanges for JWT via `POST /auth/phone-login`
+2. `EmailStep` collects the address and calls `POST /auth/email/request-otp`,
+   which emails the code and returns a signed `otp_token`
+3. `OTPStep` posts that token + the typed code to `POST /auth/email/verify-otp`,
+   which creates the account if it's new and returns a JWT
 4. JWT is stored in `localStorage` (`lsj_token`) + Zustand auth store (persisted)
-5. New users (`is_new: true`) see `ProfileStep` to add name + email
+5. New users (`is_new: true`) see `ProfileStep` to add name + mobile
+   (skippable — checkout collects a mobile anyway)
 6. On login, cart and wishlist sync with the server
+
+Resends re-request a fresh `otp_token` (the old one is single-use). The backend
+caps requests at 5 per address per 15 min and wrong guesses at 5 per code, so the
+UI just surfaces whatever error it returns.
+
+**Firebase phone OTP** is kept as a fallback in [lib/firebase.ts](lib/firebase.ts)
+and [components/auth/PhoneStep.tsx](components/auth/PhoneStep.tsx), both commented
+out, along with `phoneLogin`/`formatPhoneE164` in [lib/auth.ts](lib/auth.ts). The
+`firebase` package and `NEXT_PUBLIC_FIREBASE_*` vars are untouched — uncomment
+those three files and swap `EmailStep` back out in `AuthModal.tsx` to restore it.
 
 The axios interceptor in [lib/api.ts](lib/api.ts) auto-attaches the JWT and dispatches `lsj:auth-expired` on any 401, which is caught in [app/providers.tsx](app/providers.tsx) to log out and re-open the modal.
 

@@ -1,16 +1,54 @@
 import api from "./api";
-import { AuthResponse, User } from "@/types/user";
+import { AuthResponse, RequestOtpResponse, User } from "@/types/user";
 
-export const phoneLogin = async (
-  firebaseToken: string,
-  phone: string
-): Promise<AuthResponse> => {
-  const { data } = await api.post<AuthResponse>("/auth/phone-login", {
-    firebase_token: firebaseToken,
-    phone,
+// ──────────────────────────────────────────────
+// Customer sign-in — email one-time password
+// ──────────────────────────────────────────────
+
+/** Step 1: ask the API to email a 6-digit code. Returns the token that carries it. */
+export const requestEmailOtp = async (email: string): Promise<RequestOtpResponse> => {
+  const { data } = await api.post<RequestOtpResponse>("/auth/email/request-otp", {
+    email: email.trim().toLowerCase(),
   });
   return data;
 };
+
+/** Step 2: exchange the token + code for a JWT. Creates the account on first sign-in. */
+export const verifyEmailOtp = async (
+  otpToken: string,
+  code: string
+): Promise<AuthResponse> => {
+  const { data } = await api.post<AuthResponse>("/auth/email/verify-otp", {
+    otp_token: otpToken,
+    code,
+  });
+  return data;
+};
+
+export const isValidEmail = (email: string): boolean =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
+
+// ──────────────────────────────────────────────
+// FALLBACK — Firebase phone OTP sign-in.
+// Superseded by the email OTP flow above. To switch back, uncomment this, the
+// body of lib/firebase.ts, and the phone-login route on the backend.
+// ──────────────────────────────────────────────
+
+// export const phoneLogin = async (
+//   firebaseToken: string,
+//   phone: string
+// ): Promise<AuthResponse> => {
+//   const { data } = await api.post<AuthResponse>("/auth/phone-login", {
+//     firebase_token: firebaseToken,
+//     phone,
+//   });
+//   return data;
+// };
+
+// export const formatPhoneE164 = (phone10: string): string => {
+//   const digits = phone10.replace(/\D/g, "").slice(-10);
+//   return `+91${digits}`;
+// };
 
 export const devLogin = async (
   phone: string,
@@ -45,11 +83,6 @@ export const logoutApi = async (): Promise<void> => {
   } catch {
     // no-op: local token cleanup happens regardless
   }
-};
-
-export const formatPhoneE164 = (phone10: string): string => {
-  const digits = phone10.replace(/\D/g, "").slice(-10);
-  return `+91${digits}`;
 };
 
 export const isValidIndianMobile = (phone: string): boolean =>

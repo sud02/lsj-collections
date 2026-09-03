@@ -2,25 +2,25 @@
 import { useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import toast from "react-hot-toast";
-import type { ConfirmationResult } from "firebase/auth";
-import { phoneLogin, devLogin, formatPhoneE164, isBypassMode } from "@/lib/auth";
-import { sendOTP, resetRecaptcha } from "@/lib/firebase";
+import { requestEmailOtp, verifyEmailOtp } from "@/lib/auth";
 import { useAuthStore } from "@/store/authStore";
 
 interface Props {
-  phone: string;
-  confirmation: ConfirmationResult | null;
+  email: string;
+  otpToken: string;
   onBack: () => void;
+  onTokenRefresh: (token: string) => void;
   onComplete: (isNew: boolean) => void;
 }
 
-export default function OTPStep({ phone, confirmation, onBack, onComplete }: Props) {
+const RESEND_SECONDS = 30;
+
+export default function OTPStep({ email, otpToken, onBack, onTokenRefresh, onComplete }: Props) {
   const [digits, setDigits] = useState<string[]>(Array(6).fill(""));
-  const [timer, setTimer] = useState(30);
+  const [timer, setTimer] = useState(RESEND_SECONDS);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
-  const currentConfirm = useRef(confirmation);
   const login = useAuthStore((s) => s.login);
 
   useEffect(() => {
@@ -58,25 +58,20 @@ export default function OTPStep({ phone, confirmation, onBack, onComplete }: Pro
     e.preventDefault();
     const otp = digits.join("");
     if (otp.length !== 6) {
-      toast.error("Enter the 6-digit OTP");
+      toast.error("Enter the 6-digit code");
       return;
     }
     setLoading(true);
     try {
-      let res;
-      if (isBypassMode() || !currentConfirm.current) {
-        res = await devLogin(phone, otp);
-      } else {
-        const cred = await currentConfirm.current.confirm(otp);
-        const firebaseToken = await cred.user.getIdToken();
-        res = await phoneLogin(firebaseToken, phone);
-      }
+      const res = await verifyEmailOtp(otpToken, otp);
       login(res.token, res.user);
       toast.success(`Welcome${res.user.name ? `, ${res.user.name.split(" ")[0]}` : ""}!`);
       onComplete(Boolean(res.is_new));
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Invalid OTP";
+      const message = err instanceof Error ? err.message : "Invalid code";
       toast.error(message);
+      setDigits(Array(6).fill(""));
+      inputs.current[0]?.focus();
     } finally {
       setLoading(false);
     }
@@ -85,18 +80,12 @@ export default function OTPStep({ phone, confirmation, onBack, onComplete }: Pro
   const resend = async () => {
     setResending(true);
     try {
-      if (isBypassMode()) {
-        setTimer(30);
-        setDigits(Array(6).fill(""));
-        toast.success("Use OTP 123456");
-      } else {
-        resetRecaptcha();
-        const conf = await sendOTP(formatPhoneE164(phone), "recaptcha-container");
-        currentConfirm.current = conf;
-        setTimer(30);
-        setDigits(Array(6).fill(""));
-        toast.success("OTP resent");
-      }
+      const res = await requestEmailOtp(email);
+      onTokenRefresh(res.otp_token);
+      setTimer(RESEND_SECONDS);
+      setDigits(Array(6).fill(""));
+      inputs.current[0]?.focus();
+      toast.success(res.dev_bypass ? "Dev mode — use OTP 123456" : "New code sent");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Resend failed";
       toast.error(message);
@@ -108,9 +97,9 @@ export default function OTPStep({ phone, confirmation, onBack, onComplete }: Pro
   return (
     <form onSubmit={verify} className="p-6 space-y-5">
       <div>
-        <h4 className="font-serif text-lg text-dark mb-1">Verify OTP</h4>
+        <h4 className="font-serif text-lg text-dark mb-1">Check your inbox</h4>
         <p className="text-xs text-gray">
-          OTP sent to <span className="font-medium text-dark">+91 {phone}</span>
+          We sent a 6-digit code to <span className="font-medium text-dark">{email}</span>
         </p>
       </div>
 
@@ -128,6 +117,7 @@ export default function OTPStep({ phone, confirmation, onBack, onComplete }: Pro
               onKeyDown={(e) => onKeyDown(i, e)}
               onPaste={i === 0 ? onPaste : undefined}
               inputMode="numeric"
+              autoComplete={i === 0 ? "one-time-code" : "off"}
               maxLength={1}
               className="w-12 h-12 text-center text-lg font-semibold border border-border rounded bg-gray-light focus:outline-none focus:border-gold focus:bg-white focus:ring-2 focus:ring-gold/20 transition-all"
             />
@@ -137,7 +127,7 @@ export default function OTPStep({ phone, confirmation, onBack, onComplete }: Pro
 
       <div className="flex items-center justify-between text-xs">
         {timer > 0 ? (
-          <span className="text-gray">Resend OTP in {timer}s</span>
+          <span className="text-gray">Resend code in {timer}s</span>
         ) : (
           <button
             type="button"
@@ -145,19 +135,21 @@ export default function OTPStep({ phone, confirmation, onBack, onComplete }: Pro
             disabled={resending}
             className="text-gold font-medium hover:text-gold-dark"
           >
-            {resending ? "Sending…" : "Resend OTP"}
+            {resending ? "Sending…" : "Resend code"}
           </button>
         )}
         <button type="button" onClick={onBack} className="text-gray hover:text-dark">
-          Change Number
+          Change Email
         </button>
       </div>
 
       <Button type="submit" fullWidth size="lg" loading={loading}>
-        Verify &amp; Login
+        Verify &amp; Continue
       </Button>
 
-      <div id="recaptcha-container" />
+      <p className="text-[11px] text-gray text-center">
+        Can&apos;t find it? Check your spam or promotions folder.
+      </p>
     </form>
   );
 }

@@ -2,7 +2,8 @@
 
 REST API for LSJ Collections, a premium hallmark jewellery e-commerce platform based in Tirupati, India.
 
-Stack: **Node.js 20 + Express 4 + MySQL 8 (Hostinger) + Firebase Admin + PhonePe + Resend**.
+Stack: **Node.js 20 + Express 4 + MySQL 8 (Hostinger) + PhonePe + Resend**.
+(Firebase Admin is still installed but the phone-OTP path it served is commented out — see [Auth](#auth).)
 
 The API connects to an existing production MySQL database on Hostinger. **No migrations** — the schema is already live.
 
@@ -16,7 +17,7 @@ npm install
 
 # 2. configure
 cp .env.example .env
-# fill in DB, Firebase, PhonePe, Resend credentials
+# fill in DB, PhonePe, Resend credentials
 
 # 3. whitelist your IP in Hostinger hPanel → Remote MySQL
 
@@ -41,7 +42,7 @@ backend/
 │   ├── app.js                      Express app (middleware + routes)
 │   ├── config/
 │   │   ├── db.js                   mysql2 pool (Hostinger)
-│   │   ├── firebase.js             Firebase Admin init
+│   │   ├── firebase.js             Firebase Admin init (fallback — unused)
 │   │   ├── phonepe.js              PhonePe config + endpoints
 │   │   └── images.js               CDN URL builders
 │   ├── routes/                     thin route definitions
@@ -57,6 +58,59 @@ backend/
 
 ---
 
+## Environments
+
+Production and development never share data. Which database you get is decided
+entirely by `.env` / the host's environment variables — `.env` is gitignored, so
+nothing environment-specific is ever committed.
+
+| | Production (Render) | Development (local) |
+|---|---|---|
+| `NODE_ENV` | `production` | unset / `development` |
+| `DB_NAME` | `u529052488_lsj` | `u529052488_lsjdev` |
+| Data | real customers and orders | catalogue only, empty customer tables |
+| Rate limiters | on | skipped |
+| `AUTH_BYPASS_OTP` | ignored (hard-disabled) | honoured if set |
+
+`config/db.js` enforces this on startup:
+
+- **production + a dev-looking `DB_NAME`** (matching `dev|test|local|staging`, or a
+  localhost host) → logs an error and **exits**. Failing fast beats writing real
+  orders into a throwaway database; a crashed deploy is not promoted, so the
+  previous release keeps serving.
+- **development + the live database** → logs a loud warning, because a test
+  sign-up there creates a real customer record.
+
+## Development database
+
+`backend/.env` ships pointing at the **live** Hostinger database, so a test
+sign-up or checkout run locally creates a real customer row and a real order.
+Use a separate dev database instead — the server logs a loud warning at startup
+whenever it detects otherwise.
+
+The DB user only has privileges on `u529052488_lsj`, so the database itself must
+be created by hand:
+
+1. hPanel → **Databases → MySQL Databases** → create e.g. `u529052488_lsjdev`
+   (note the user and password it generates)
+2. Put those in `backend/.env` as `DEV_DB_NAME` / `DEV_DB_USER` / `DEV_DB_PASSWORD`
+3. Run the clone:
+
+   ```bash
+   node scripts/clone-to-dev.js          # add --drop to rebuild existing tables
+   ```
+
+4. Point `DB_NAME` / `DB_USER` / `DB_PASSWORD` at the dev database and restart
+
+The clone copies **every table's structure**, but only catalogue rows —
+categories, sub_categories, products, product_variations, attributes, ornaments,
+features, partners, advertisements, coupons. Customer tables (`users`, `orders`,
+`order_products`, `cart`, `wishlist`, `ratings`, `testimonials`, `contact`,
+`subscriptions`, `admin`) are created empty by design, so nothing personal is
+ever copied out of production. The source database is only ever read from.
+
+Seed a dev admin with `node scripts/create-admin.js` once pointed at the dev DB.
+
 ## API endpoints
 
 Base URL: `/api`
@@ -64,10 +118,55 @@ Base URL: `/api`
 ### Auth
 | Method | Path | Auth | Notes |
 |---|---|---|---|
-| POST | `/auth/phone-login` | Public | Verify Firebase OTP token, issue JWT (rate limited 5/15min) |
-| POST | `/auth/complete-profile` | Auth | Update name/email/address |
+| POST | `/auth/email/request-otp` | Public | Email a 6-digit code, return a signed `otp_token` (5 requests/15min per address) |
+| POST | `/auth/email/verify-otp` | Public | Verify `otp_token` + code, create the account if new, issue JWT |
+| POST | `/auth/admin-login` | Public | Admin portal email + password |
+| POST | `/auth/complete-profile` | Auth | Update name/email/mobile/address |
 | GET  | `/auth/me` | Auth | Current user |
 | POST | `/auth/logout` | Auth | Client drops token |
+| ~~POST~~ | ~~`/auth/phone-login`~~ | — | Firebase phone OTP — commented out, see below |
+
+#### Customer sign-in — email OTP
+
+Customers sign in with a one-time code emailed by **Resend**; there is no password.
+First verification creates the account, so sign-up and sign-in are the same flow.
+
+```
+POST /auth/email/request-otp  { email }
+  → { otp_token, email, expires_in, is_registered }
+POST /auth/email/verify-otp   { otp_token, code }
+  → { token, user, is_new }        // is_new → show the profile step
+```
+
+Codes are **not stored in MySQL** (the Hostinger schema is live and we don't run
+migrations). `otp_token` carries the address and expiry in the clear plus an HMAC
+over the payload *and* the code — the code itself can't be recovered from it, and
+verification recomputes the HMAC with whatever the user typed
+(`src/services/otp.service.js`). Defences:
+
+| Layer | Limit |
+|---|---|
+| `otpRequestLimiter` | 5 code requests / 15 min, keyed on the email address |
+| `otpVerifyLimiter` | 15 verification attempts / 15 min per IP |
+| Signed token | 5 wrong guesses, 10-minute expiry, single-use after success |
+
+Tune with `OTP_TTL_MINUTES`, `OTP_MAX_ATTEMPTS`, `OTP_SECRET` (defaults to `JWT_SECRET`).
+Set `AUTH_BYPASS_OTP=true` to skip the email entirely and accept `AUTH_BYPASS_CODE`
+during local development.
+
+**Cost:** Resend's free tier covers 3,000 emails/month (100/day) — enough for the
+current volume, since one sign-in is one email. Beyond that it's $20/month for
+50k. If sign-ins ever outgrow that, Amazon SES is ~$0.10 per 1,000 emails and
+`email.service.js` is the only file that would change.
+
+#### Firebase phone OTP (fallback)
+
+Mobile-number sign-in is left in the tree, commented out, so it can be restored:
+`config/firebase.js`, `services/firebase.service.js`, and the `phoneLogin` handler,
+`phoneLoginSchema` and `/phone-login` route in `controllers/auth.controller.js` /
+`routes/auth.routes.js`. Uncomment those four spots and restore the
+`FIREBASE_*` env vars. `/auth/dev-login` (phone + fixed code, gated on
+`AUTH_BYPASS_OTP`) is still wired up.
 
 ### Products
 | Method | Path | Auth | Notes |
