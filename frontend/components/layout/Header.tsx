@@ -55,8 +55,18 @@ export default function Header() {
         setCatOpen(false);
       }
     };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setAccountOpen(false);
+        setCatOpen(false);
+      }
+    };
     document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
   }, []);
 
   const onSearch = (e: React.FormEvent) => {
@@ -225,7 +235,9 @@ export default function Header() {
               <ChevronDown className={cn("w-4 h-4 transition-transform", catOpen && "rotate-180")} />
             </button>
             {catOpen && (
-              <div className="absolute top-full left-0 mt-1 bg-white text-dark shadow-lg rounded min-w-[260px] py-2 border border-border z-50">
+              // Cap the panel to the viewport and scroll inside it — the catalogue has
+              // enough categories to run off the bottom of the screen otherwise.
+              <div className="absolute top-full left-0 mt-1 bg-white text-dark shadow-lg rounded min-w-[260px] py-2 border border-border z-50 max-h-[70vh] overflow-y-auto overscroll-contain">
                 {categories.length === 0 ? (
                   <div className="px-4 py-2 text-xs text-gray">No categories yet</div>
                 ) : (
