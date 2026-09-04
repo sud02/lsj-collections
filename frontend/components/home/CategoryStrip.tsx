@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import Image from "next/image";
+import SafeImage from "@/components/ui/SafeImage";
 import Link from "next/link";
 import api from "@/lib/api";
 import { Category } from "@/types/product";
@@ -34,7 +34,7 @@ export default function CategoryStrip() {
             >
               <div className="relative w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden bg-gold-bg border-2 border-transparent group-hover:border-gold transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-md">
                 {c.image_url && (
-                  <Image
+                  <SafeImage
                     src={c.image_url}
                     alt={c.name}
                     fill

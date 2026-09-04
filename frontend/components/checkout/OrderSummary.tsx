@@ -1,5 +1,5 @@
 "use client";
-import Image from "next/image";
+import SafeImage from "@/components/ui/SafeImage";
 import { CartItem } from "@/types/cart";
 import { formatINR, computeTotals } from "@/lib/utils";
 
@@ -21,7 +21,7 @@ export default function OrderSummary({ items, discount = 0 }: Props) {
           <li key={i.id} className="flex items-center gap-3 pb-3 border-b border-border last:border-0 last:pb-0">
             <div className="relative w-14 h-14 rounded overflow-hidden bg-gold-bg shrink-0 border border-border">
               {i.product.featured_image_url && (
-                <Image
+                <SafeImage
                   src={i.product.featured_image_url}
                   alt={i.product.product_name}
                   fill

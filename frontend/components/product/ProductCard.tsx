@@ -1,5 +1,5 @@
 "use client";
-import Image from "next/image";
+import SafeImage from "@/components/ui/SafeImage";
 import Link from "next/link";
 import { Heart, ShoppingBag, Eye } from "lucide-react";
 import toast from "react-hot-toast";
@@ -46,7 +46,7 @@ export default function ProductCard({ product }: { product: Product }) {
       <Link href={`/products/${product.slug}`} className="block">
         <div className="relative aspect-square overflow-hidden bg-gold-bg">
           {product.featured_image_url ? (
-            <Image
+            <SafeImage
               src={product.featured_image_url}
               alt={product.product_name}
               fill

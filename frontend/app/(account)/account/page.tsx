@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import SafeImage from "@/components/ui/SafeImage";
 import {
   ChevronDown,
   User as UserIcon,
@@ -120,7 +120,7 @@ function OrderCard({ order }: { order: OrderSummary }) {
                 <li key={it.id} className="flex items-center gap-3">
                   <div className="w-12 h-12 shrink-0 bg-white border border-border rounded overflow-hidden">
                     {it.product_image && (
-                      <Image
+                      <SafeImage
                         src={it.featured_image_url || productImage(it.product_image)}
                         alt={it.product_name}
                         width={48}

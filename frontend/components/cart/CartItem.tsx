@@ -1,5 +1,5 @@
 "use client";
-import Image from "next/image";
+import SafeImage from "@/components/ui/SafeImage";
 import Link from "next/link";
 import { Minus, Plus, X } from "lucide-react";
 import toast from "react-hot-toast";
@@ -23,7 +23,7 @@ export default function CartItem({ item }: { item: CartItemType }) {
         className="shrink-0 w-20 h-20 rounded-lg overflow-hidden bg-gold-bg relative border border-border"
       >
         {item.product.featured_image_url && (
-          <Image
+          <SafeImage
             src={item.product.featured_image_url}
             alt={item.product.product_name}
             fill

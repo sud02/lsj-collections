@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import Image from "next/image";
+import SafeImage from "@/components/ui/SafeImage";
 import { ChevronLeft, ChevronRight, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -56,7 +56,15 @@ export default function ProductGallery({ images, video, alt }: Props) {
                   <Play className="w-4 h-4 text-white fill-white" />
                 </div>
               ) : (
-                <Image src={thumb} alt={`${alt} ${i + 1}`} fill className="object-cover" />
+                // Without an explicit sizes, `fill` defaults to 100vw and Next
+                // requests a 3840px variant for an 80px thumbnail.
+                <SafeImage
+                  src={thumb}
+                  alt={`${alt} ${i + 1}`}
+                  fill
+                  sizes="80px"
+                  className="object-cover"
+                />
               )}
             </button>
           );
@@ -78,7 +86,7 @@ export default function ProductGallery({ images, video, alt }: Props) {
               className="absolute inset-0 w-full h-full object-cover"
             />
           ) : current ? (
-            <Image
+            <SafeImage
               src={current}
               alt={alt}
               fill
