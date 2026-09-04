@@ -35,7 +35,7 @@ export default function Header() {
   const accountRef = useRef<HTMLDivElement>(null);
   const catRef = useRef<HTMLDivElement>(null);
 
-  const { user, isLoggedIn, logout } = useAuthStore();
+  const { user, isLoggedIn, logout, openAuthModal } = useAuthStore();
   const cartCount = useCartStore((s) => s.count);
   const wishlistCount = useWishlistStore((s) => s.count);
 
@@ -134,13 +134,15 @@ export default function Header() {
                       </button>
                     </>
                   ) : (
-                    <Link
-                      href="/account"
-                      onClick={() => setAccountOpen(false)}
-                      className="block w-full text-left px-4 py-2 text-xs hover:bg-gold-bg"
+                    <button
+                      onClick={() => {
+                        setAccountOpen(false);
+                        openAuthModal();
+                      }}
+                      className="flex w-full items-center gap-2 px-4 py-2 text-xs text-left hover:bg-gold-bg"
                     >
-                      Login / Register <span className="text-gold-dark">(coming soon)</span>
-                    </Link>
+                      <User className="w-3 h-3" /> Login / Register
+                    </button>
                   )}
                 </div>
               )}
