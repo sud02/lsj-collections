@@ -48,10 +48,24 @@ exports.otpVerifyLimiter = rateLimit({
   }
 })
 
+/**
+ * Broad abuse ceiling across the whole API — scrapers and floods, not people.
+ *
+ * This is deliberately generous. A single storefront page fires 6-8 requests
+ * (categories, popular, new arrivals, products, cart, wishlist), so an ordinary
+ * browsing session reaches several hundred well within the window, and office
+ * or mobile networks put many customers behind one IP. The endpoints that
+ * actually need protecting — sign-in, OTP requests, payments — carry their own
+ * far tighter limits below, so this one only has to stop the extremes.
+ *
+ * It was effectively never enforced before (skip() was tied to an unset
+ * NODE_ENV), so 100 was never tested against real traffic; it blocks normal
+ * shopping within a couple of minutes.
+ */
 exports.apiLimiter = rateLimit({
   ...baseOpts,
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 1000,
   message: {
     success: false,
     error: 'Too many requests. Please slow down.',
