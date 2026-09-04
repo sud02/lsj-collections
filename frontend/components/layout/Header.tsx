@@ -109,7 +109,10 @@ export default function Header() {
                 <ChevronDown className="w-3 h-3" />
               </button>
               {accountOpen && (
-                <div className="absolute right-0 top-full mt-1 bg-white text-dark shadow-lg rounded w-48 py-2 border border-border">
+                // z-50 matters: the search field below is positioned too, so without
+                // it paint order falls back to DOM order and the search bar covers
+                // this panel.
+                <div className="absolute right-0 top-full mt-1 bg-white text-dark shadow-lg rounded w-48 py-2 border border-border z-50">
                   {isLoggedIn ? (
                     <>
                       <Link href="/account" onClick={() => setAccountOpen(false)} className="flex items-center gap-2 px-4 py-2 text-xs hover:bg-gold-bg">
