@@ -13,3 +13,6 @@ uploads/*
 coverage/
 .vscode/
 .idea/
+
+# Rollback snapshots written by scripts/migrate-images-to-cloudinary.js
+backend/scripts/image-backup-*.json
