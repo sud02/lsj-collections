@@ -70,7 +70,15 @@ nothing environment-specific is ever committed.
 | `DB_NAME` | `u529052488_lsj` | `u529052488_lsjdev` |
 | Data | real customers and orders | catalogue only, empty customer tables |
 | Rate limiters | on | skipped |
-| `AUTH_BYPASS_OTP` | ignored (hard-disabled) | honoured if set |
+| `AUTH_BYPASS_OTP` | ignored — see below | honoured if set |
+
+`utils/environment.js` decides which environment this really is. `NODE_ENV`
+alone is not trusted: a host that simply never sets it would leave every
+`NODE_ENV !== 'production'` check believing it is in development, silently
+enabling the OTP bypass and disabling rate limiting on a live site. So the
+**database is the deciding signal** — anything that weakens security for
+convenience (`AUTH_BYPASS_OTP`, skipping rate limits) requires *both* a
+non-production `NODE_ENV` **and** a throwaway `DB_NAME`. It fails closed.
 
 `config/db.js` enforces this on startup:
 

@@ -23,13 +23,13 @@ const pool = mysql.createPool({
  * real customer row, or worse, production writing orders into the dev database
  * where nobody would ever find them.
  */
-const DEV_DB_PATTERN = /dev|test|local|staging/i
+const { isDevDatabase, isProductionRuntime } = require('../utils/environment')
 
 const checkDatabaseEnvironment = () => {
   const host = String(process.env.DB_HOST || '')
   const name = String(process.env.DB_NAME || '')
-  const isProd = process.env.NODE_ENV === 'production'
-  const looksDev = DEV_DB_PATTERN.test(name) || /^(localhost|127\.0\.0\.1|::1)$/.test(host)
+  const isProd = isProductionRuntime()
+  const looksDev = isDevDatabase()
 
   if (isProd && looksDev) {
     // Fail fast rather than serve customers against throwaway data. On Render a

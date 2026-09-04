@@ -1,11 +1,13 @@
 const rateLimit = require('express-rate-limit')
-
-const isDev = process.env.NODE_ENV !== 'production'
+const { devToolsAllowed } = require('../utils/environment')
 
 const baseOpts = {
   standardHeaders: true,
   legacyHeaders: false,
-  skip: () => isDev
+  // Only skip for genuine local development — a deployment serving the live
+  // database keeps its limits even if NODE_ENV is missing. Evaluated per
+  // request rather than captured at module load.
+  skip: () => devToolsAllowed()
 }
 
 exports.authLimiter = rateLimit({

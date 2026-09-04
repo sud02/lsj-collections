@@ -10,6 +10,7 @@ const emailService = require('../services/email.service')
 const { ok, fail, unauthorized } = require('../utils/response')
 const { normalizeMobile } = require('../utils/sanitize')
 const logger = require('../utils/logger')
+const { devToolsAllowed } = require('../utils/environment')
 
 exports.requestEmailOtpSchema = z.object({
   email: z
@@ -58,14 +59,19 @@ const normalizeEmail = (val) => String(val || '').trim().toLowerCase()
 
 /**
  * Local-only escape hatch: skip sending mail and accept AUTH_BYPASS_CODE.
- * Hard-disabled in production — if the flag ever leaks into a production deploy,
- * anyone could sign in as anyone with the fixed code, so it is ignored there and
- * shouted about in the logs instead.
+ *
+ * Requires a throwaway database as well as a non-production NODE_ENV. A host
+ * that forgets to set NODE_ENV must not be enough to turn this on — with the
+ * flag set, anyone could sign in as anyone with the fixed code.
  */
 const bypassEnabled = () => {
   if (process.env.AUTH_BYPASS_OTP !== 'true') return false
-  if (process.env.NODE_ENV === 'production') {
-    logger.error('AUTH_BYPASS_OTP is set in production — ignoring it. Unset this env var.')
+  if (!devToolsAllowed()) {
+    logger.error(
+      'AUTH_BYPASS_OTP is set but this process is serving the live database — ' +
+      'ignoring it. Unset AUTH_BYPASS_OTP on this deployment.',
+      { db: process.env.DB_NAME, node_env: process.env.NODE_ENV || '(unset)' }
+    )
     return false
   }
   return true
