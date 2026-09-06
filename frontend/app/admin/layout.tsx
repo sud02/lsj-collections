@@ -25,10 +25,10 @@ const NAV: NavItem[] = [
   { href: "/admin/testimonials", label: "Testimonials", icon: MessageSquareQuote },
   { href: "/admin/reviews", label: "Reviews", icon: Star },
   { href: "/admin/gold-rate", label: "Gold rate", icon: Coins },
+  { href: "/admin/customers", label: "Customers", icon: Users },
 ];
 
 const FUTURE_NAV: NavItem[] = [
-  { href: "/admin/customers", label: "Customers", icon: Users, soon: true },
   { href: "/admin/coupons", label: "Coupons", icon: BadgePercent, soon: true },
   { href: "/admin/banners", label: "Banners & Ads", icon: ImageIcon, soon: true },
   { href: "/admin/messages", label: "Messages", icon: Mail, soon: true },

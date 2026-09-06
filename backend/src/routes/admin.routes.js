@@ -33,6 +33,11 @@ router.get('/orders', asyncHandler(ctrl.listOrders))
 router.get('/orders/:id', asyncHandler(ctrl.getOrder))
 router.patch('/orders/:id', asyncHandler(ctrl.updateOrder))
 
+// Customers
+router.get('/customers', asyncHandler(ctrl.listCustomers))
+router.get('/customers/:id', asyncHandler(ctrl.getCustomer))
+router.patch('/customers/:id', asyncHandler(ctrl.updateCustomer))
+
 // Gold rate
 router.get('/gold-rate', asyncHandler(ctrl.getGoldRate))
 router.patch('/gold-rate', asyncHandler(ctrl.updateGoldRate))

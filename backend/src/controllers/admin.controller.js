@@ -5,7 +5,7 @@ const storage = require('../services/storage.service')
 const { cleanName } = require('../utils/format')
 const logger = require('../utils/logger')
 const { ok, notFound, badRequest } = require('../utils/response')
-const { toPositiveInt } = require('../utils/sanitize')
+const { toPositiveInt, cleanString, escapeLike } = require('../utils/sanitize')
 const { productSelect } = require('../utils/sql')
 
 // ──────────────────────────────────────────────
@@ -460,6 +460,94 @@ const RATE_22K_MATCHER = (n) => /22\s*k/i.test(n)
 const findRateRow = async (matcher) => {
   const [rows] = await db.query('SELECT id, name, price, updated_at FROM ornaments WHERE status = 1')
   return rows.find((r) => matcher(String(r.name || '')))
+}
+
+// ──────────────────────────────────────────────
+// Customers
+// ──────────────────────────────────────────────
+
+/**
+ * GET /admin/customers — registered customers with their order totals.
+ *
+ * orders.user_id is a varchar holding the users.id, so the join casts rather
+ * than comparing types directly. Aggregating here keeps the list to one query
+ * instead of one per row.
+ */
+exports.listCustomers = async (req, res) => {
+  const search = cleanString(req.query.search || '', 100)
+  const where = []
+  const params = []
+
+  if (search) {
+    const like = `%${escapeLike(search)}%`
+    where.push('(u.name LIKE ? OR u.email LIKE ? OR u.mobile LIKE ?)')
+    params.push(like, like, like)
+  }
+  if (req.query.status === 'active') where.push('u.status = 1')
+  if (req.query.status === 'inactive') where.push('u.status = 0')
+
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : ''
+
+  const [rows] = await db.query(
+    `SELECT u.id, u.name, u.email, u.mobile, u.status, u.created_at,
+            COUNT(o.id) AS order_count,
+            COALESCE(SUM(CASE WHEN o.payment_status = 'paid' THEN o.grandtotal END), 0) AS total_spent,
+            MAX(o.created_at) AS last_order_at
+     FROM users u
+     LEFT JOIN orders o ON o.user_id = CAST(u.id AS CHAR)
+     ${whereSql}
+     GROUP BY u.id
+     ORDER BY u.created_at DESC
+     LIMIT 300`,
+    params
+  )
+
+  return ok(res, rows)
+}
+
+/** GET /admin/customers/:id — one customer plus their order history. */
+exports.getCustomer = async (req, res) => {
+  const id = toPositiveInt(req.params.id)
+  if (!id) return notFound(res, 'Customer not found')
+
+  const [users] = await db.query(
+    'SELECT id, name, email, mobile, address, status, created_at, updated_at FROM users WHERE id = ?',
+    [id]
+  )
+  if (!users.length) return notFound(res, 'Customer not found')
+
+  const [orders] = await db.query(
+    `SELECT id, order_id, grandtotal, payment_status, order_status, created_at
+     FROM orders WHERE user_id = ? ORDER BY created_at DESC`,
+    [String(id)]
+  )
+
+  return ok(res, { customer: users[0], orders })
+}
+
+/** PATCH /admin/customers/:id — activate or deactivate an account. */
+exports.updateCustomer = async (req, res) => {
+  const id = toPositiveInt(req.params.id)
+  if (!id) return notFound(res, 'Customer not found')
+
+  if (typeof req.body.status === 'undefined') {
+    return badRequest(res, 'Nothing to update', 'NO_FIELDS')
+  }
+
+  const status = Number(req.body.status) === 1 ? 1 : 0
+  const [result] = await db.query(
+    'UPDATE users SET status = ?, updated_at = NOW() WHERE id = ?',
+    [status, id]
+  )
+  if (!result.affectedRows) return notFound(res, 'Customer not found')
+
+  logger.info('Admin changed customer status', { customer_id: id, status })
+
+  const [rows] = await db.query(
+    'SELECT id, name, email, mobile, status, created_at FROM users WHERE id = ?',
+    [id]
+  )
+  return ok(res, rows[0])
 }
 
 exports.getGoldRate = async (_req, res) => {
