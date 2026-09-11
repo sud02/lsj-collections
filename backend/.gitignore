@@ -16,3 +16,7 @@ coverage/
 
 # Rollback snapshots written by scripts/migrate-images-to-cloudinary.js
 backend/scripts/image-backup-*.json
+
+# Backups written by maintenance scripts (data snapshots, not code)
+backend/scripts/test-product-backup-*.json
+backend/scripts/popular-flag-backup.json
