@@ -5,29 +5,6 @@ import Link from "next/link";
 import api from "@/lib/api";
 import { Advertisement } from "@/types/product";
 
-const fallback: Advertisement[] = [
-  {
-    id: -10,
-    title: "Diamond Rings",
-    subtitle: "Certified brilliance for every finger",
-    image_url:
-      "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=1200&q=80",
-    cta_text: "Shop Diamonds",
-    link_url: "/products?search=diamond",
-    position: "split",
-  },
-  {
-    id: -11,
-    title: "Festive Gifting",
-    subtitle: "Handpicked silver & gold gifting pieces",
-    image_url:
-      "https://images.unsplash.com/photo-1515377905703-c4788e51af15?w=1200&q=80",
-    cta_text: "Explore Gifts",
-    link_url: "/products?search=gift",
-    position: "split",
-  },
-];
-
 export default function SplitBanners() {
   const [banners, setBanners] = useState<Advertisement[]>([]);
 
@@ -35,10 +12,11 @@ export default function SplitBanners() {
     api
       .get<Advertisement[]>("/advertisements")
       .then((r) => {
+        // Only render a real pair — a lone banner in a two-up layout looks broken.
         const split = r.data.filter((a) => a.position === "split");
-        setBanners(split.length >= 2 ? split.slice(0, 2) : fallback);
+        setBanners(split.length >= 2 ? split.slice(0, 2) : []);
       })
-      .catch(() => setBanners(fallback));
+      .catch(() => setBanners([]));
   }, []);
 
   if (banners.length === 0) return null;

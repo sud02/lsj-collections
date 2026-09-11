@@ -9,31 +9,9 @@ import api from "@/lib/api";
 import { Advertisement } from "@/types/product";
 import { cn } from "@/lib/utils";
 
-const fallback: Advertisement[] = [
-  {
-    id: -1,
-    title: "Signature Bridal Collection",
-    subtitle: "Timeless designs crafted for your special day",
-    image_url:
-      "https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=1600&q=80",
-    link_url: "/products",
-    cta_text: "Shop Now",
-    position: "hero",
-  },
-  {
-    id: -2,
-    title: "Hallmark Gold Edit",
-    subtitle: "22K & 24K certified hallmark jewellery",
-    image_url:
-      "https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=1600&q=80",
-    link_url: "/popular",
-    cta_text: "Explore",
-    position: "hero",
-  },
-];
-
 export default function HeroBanner() {
   const [slides, setSlides] = useState<Advertisement[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, duration: 30 }, [
     Autoplay({ delay: 4500, stopOnInteraction: false }),
   ]);
@@ -43,10 +21,10 @@ export default function HeroBanner() {
     api
       .get<Advertisement[]>("/advertisements")
       .then((r) => {
-        const hero = r.data.filter((a) => !a.position || a.position === "hero");
-        setSlides(hero.length ? hero : fallback);
+        setSlides(r.data.filter((a) => !a.position || a.position === "hero"));
       })
-      .catch(() => setSlides(fallback));
+      .catch(() => setSlides([]))
+      .finally(() => setLoaded(true));
   }, []);
 
   const onSelect = useCallback(() => {
@@ -62,8 +40,45 @@ export default function HeroBanner() {
     };
   }, [emblaApi, onSelect]);
 
+  if (!loaded) {
+    return (
+      <div className="container-lsj py-4">
+        <div className="h-[520px] rounded-lg bg-gold-bg animate-pulse" />
+      </div>
+    );
+  }
+
+  // No banners configured. Show the shop's own identity rather than inventing
+  // collections over stock imagery.
   if (slides.length === 0) {
-    return <div className="container-lsj py-4"><div className="h-[520px] rounded-lg bg-gold-bg animate-pulse" /></div>;
+    return (
+      <div className="container-lsj py-4">
+        <div className="h-[360px] md:h-[440px] rounded-lg bg-gradient-to-br from-gold-bg via-white to-gold-bg border border-gold-light/60 flex flex-col items-center justify-center text-center px-6">
+          <Image
+            src="/logo_lsj.png"
+            alt="LSJ Collections"
+            width={1508}
+            height={1114}
+            priority
+            className="h-20 w-auto mb-5"
+          />
+          <h1 className="font-serif text-3xl md:text-4xl text-dark">
+            Hallmark Gold &amp; Silver Jewellery
+          </h1>
+          <div className="w-16 h-[2px] bg-gold my-4" />
+          <p className="text-sm text-gray max-w-md">
+            BIS-certified pieces handcrafted in Tirupati — bangles, harams,
+            necklaces and more.
+          </p>
+          <Link
+            href="/products"
+            className="mt-6 inline-flex items-center gap-2 px-6 h-11 rounded bg-gold text-white text-sm font-medium hover:bg-gold-dark transition-colors"
+          >
+            Browse the collection
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (

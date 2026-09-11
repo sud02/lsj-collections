@@ -33,6 +33,10 @@ export default function FeaturedProducts({
       .finally(() => setLoading(false));
   }, [endpoint, limit]);
 
+  // An empty grid under a heading reads as broken. If a collection has nothing
+  // active in it, leave the section out entirely.
+  if (!loading && products.length === 0) return null;
+
   return (
     <section className="py-14">
       <div className="container-lsj">

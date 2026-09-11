@@ -12,13 +12,9 @@ export default function GoldRateTicker() {
     api
       .get<GoldRate>("/gold-rate")
       .then((r) => setRate(r.data))
-      .catch(() =>
-        setRate({
-          rate_22k: 6480,
-          rate_24k: 7065,
-          updated_at: new Date().toISOString(),
-        })
-      );
+      // Never show an invented rate — a wrong gold price misleads customers
+      // about what they are paying. Hide the panel instead.
+      .catch(() => setRate(null));
   }, []);
 
   if (!rate) return null;
